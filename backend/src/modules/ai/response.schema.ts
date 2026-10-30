@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+export const coordinatesSchema = z
+  .object({
+    lat: z.number(),
+    lng: z.number(),
+  })
+  .optional();
+
 export const activitySchema = z.object({
   time: z.string().default('Morning'),
   name: z.string().min(1),
@@ -9,6 +16,7 @@ export const activitySchema = z.object({
   travelTime: z.string().default('15 mins'),
   transportation: z.string().default('Walk'),
   mapLink: z.string().optional(),
+  coordinates: coordinatesSchema,
 });
 
 export const daySchema = z.object({
@@ -30,6 +38,7 @@ export const hotelSchema = z.object({
   whyRecommended: z.string().min(1),
   bookingLink: z.string().optional(),
   verified: z.boolean().default(false),
+  coordinates: coordinatesSchema,
 });
 
 export const restaurantSchema = z.object({
@@ -39,6 +48,7 @@ export const restaurantSchema = z.object({
   dietarySuitability: z.array(z.string()).default([]),
   location: z.string().min(1),
   verified: z.boolean().default(false),
+  coordinates: coordinatesSchema,
 });
 
 export const budgetBreakdownSchema = z.object({

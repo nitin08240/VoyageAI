@@ -50,7 +50,7 @@ REQUIRED JSON STRUCTURE:
   "days": [
     {
       "dayNumber": 1,
-      "date": "${trip.dates.departure}",
+      "date": "${startDate}",
       "title": "Arrival & First Impressions",
       "morning": [
         {
@@ -60,7 +60,8 @@ REQUIRED JSON STRUCTURE:
           "duration": "2 hours",
           "cost": 15,
           "travelTime": "20 mins",
-          "transportation": "Metro Line 1"
+          "transportation": "Metro Line 1",
+          "coordinates": { "lat": 35.0116, "lng": 135.7681 }
         }
       ],
       "afternoon": [
@@ -71,7 +72,8 @@ REQUIRED JSON STRUCTURE:
           "duration": "2.5 hours",
           "cost": 25,
           "travelTime": "15 mins",
-          "transportation": "Walk"
+          "transportation": "Walk",
+          "coordinates": { "lat": 35.0125, "lng": 135.7690 }
         }
       ],
       "evening": [
@@ -82,7 +84,8 @@ REQUIRED JSON STRUCTURE:
           "duration": "2 hours",
           "cost": 35,
           "travelTime": "10 mins",
-          "transportation": "Taxi / Walk"
+          "transportation": "Taxi / Walk",
+          "coordinates": { "lat": 35.0140, "lng": 135.7710 }
         }
       ],
       "practicalAdvice": "Helpful local tip for Day 1"
@@ -97,7 +100,8 @@ REQUIRED JSON STRUCTURE:
       "facilities": ["Free Wi-Fi", "Breakfast Included", "Central Location"],
       "whyRecommended": "Why this matches traveler preferences",
       "bookingLink": "https://www.booking.com/searchresults.html?ss=${encodeURIComponent(dest)}",
-      "verified": false
+      "verified": false,
+      "coordinates": { "lat": 35.0116, "lng": 135.7681 }
     }
   ],
   "restaurants": [
@@ -107,7 +111,8 @@ REQUIRED JSON STRUCTURE:
       "estimatedCost": 25,
       "dietarySuitability": ["Vegetarian options", "Halal"],
       "location": "District / Street name",
-      "verified": false
+      "verified": false,
+      "coordinates": { "lat": 35.0116, "lng": 135.7681 }
     }
   ],
   "activities": [

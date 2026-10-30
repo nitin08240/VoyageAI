@@ -23,6 +23,7 @@ export interface IItineraryDocument extends Document {
     whyRecommended: string;
     bookingLink?: string;
     verified: boolean;
+    coordinates?: { lat: number; lng: number };
   }>;
   restaurants: Array<{
     name: string;
@@ -31,6 +32,7 @@ export interface IItineraryDocument extends Document {
     dietarySuitability: string[];
     location: string;
     verified: boolean;
+    coordinates?: { lat: number; lng: number };
   }>;
   activities: IActivitySubdoc[];
   budgetBreakdown: {
@@ -72,7 +74,16 @@ interface IActivitySubdoc {
   travelTime?: string;
   transportation?: string;
   mapLink?: string;
+  coordinates?: { lat: number; lng: number };
 }
+
+const coordinatesSchema = new Schema(
+  {
+    lat: { type: Number },
+    lng: { type: Number },
+  },
+  { _id: false }
+);
 
 const activitySchema = new Schema<IActivitySubdoc>(
   {
@@ -84,6 +95,7 @@ const activitySchema = new Schema<IActivitySubdoc>(
     travelTime: { type: String },
     transportation: { type: String },
     mapLink: { type: String },
+    coordinates: { type: coordinatesSchema },
   },
   { _id: false }
 );
@@ -111,6 +123,7 @@ const hotelSchema = new Schema(
     whyRecommended: { type: String, required: true },
     bookingLink: { type: String },
     verified: { type: Boolean, default: false },
+    coordinates: { type: coordinatesSchema },
   },
   { _id: false }
 );
@@ -123,6 +136,7 @@ const restaurantSchema = new Schema(
     dietarySuitability: { type: [String], default: [] },
     location: { type: String, required: true },
     verified: { type: Boolean, default: false },
+    coordinates: { type: coordinatesSchema },
   },
   { _id: false }
 );

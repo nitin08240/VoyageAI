@@ -70,6 +70,11 @@ export interface ITrip {
 }
 
 // ─── Itinerary Sub-Types ──────────────────────────────────────────────────────
+export interface ICoordinates {
+  lat: number;
+  lng: number;
+}
+
 export interface IActivity {
   time: string;
   name: string;
@@ -79,6 +84,7 @@ export interface IActivity {
   travelTime?: string;
   transportation?: string;
   mapLink?: string;
+  coordinates?: ICoordinates;
 }
 
 export interface ITripDay {
@@ -100,6 +106,7 @@ export interface IHotel {
   whyRecommended: string;
   bookingLink?: string;
   verified: boolean;
+  coordinates?: ICoordinates;
 }
 
 export interface IRestaurant {
@@ -109,6 +116,7 @@ export interface IRestaurant {
   dietarySuitability: string[];
   location: string;
   verified: boolean;
+  coordinates?: ICoordinates;
 }
 
 export interface IBudgetBreakdown {
