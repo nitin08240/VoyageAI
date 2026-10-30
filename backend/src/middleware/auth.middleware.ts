@@ -14,7 +14,11 @@ export function authenticate(
   next: NextFunction
 ): void {
   try {
-    const token = req.cookies?.[COOKIE_NAME];
+    let token = req.cookies?.[COOKIE_NAME];
+
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
 
     if (!token) {
       throw new AuthError('No authentication token provided. Please log in.');
@@ -39,7 +43,7 @@ export function authenticate(
 
 /**
  * Optional authentication middleware.
- * Attaches user to request if a valid JWT cookie exists.
+ * Attaches user to request if a valid JWT cookie or Bearer token exists.
  * Does NOT throw if missing or invalid — just calls next().
  */
 export function optionalAuthenticate(
@@ -48,7 +52,11 @@ export function optionalAuthenticate(
   next: NextFunction
 ): void {
   try {
-    const token = req.cookies?.[COOKIE_NAME];
+    let token = req.cookies?.[COOKIE_NAME];
+
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
 
     if (!token) {
       return next();

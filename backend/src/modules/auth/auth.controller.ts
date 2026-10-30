@@ -15,7 +15,7 @@ export async function register(
   try {
     const { user, token } = await authService.register(req.body);
     setCookieToken(res, token);
-    sendSuccess(res, { user }, 'Account created successfully.', 201);
+    sendSuccess(res, { user, token }, 'Account created successfully.', 201);
   } catch (err) {
     next(err);
   }
@@ -33,7 +33,7 @@ export async function login(
     const { email, password } = req.body;
     const { user, token } = await authService.login(email, password);
     setCookieToken(res, token);
-    sendSuccess(res, { user }, 'Logged in successfully.');
+    sendSuccess(res, { user, token }, 'Logged in successfully.');
   } catch (err) {
     next(err);
   }

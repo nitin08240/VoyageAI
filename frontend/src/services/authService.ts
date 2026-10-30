@@ -18,6 +18,10 @@ interface ApiResponse<T> {
 export const authService = {
   login: async (payload: LoginPayload): Promise<AuthResponse> => {
     const res = await apiPost<ApiResponse<IUser>>('/auth/login', payload);
+    const token = (res.data as any).token || (res.data as any).data?.token;
+    if (token) {
+      localStorage.setItem('voyage_token', token);
+    }
     return {
       success: res.data.success,
       message: res.data.message,
@@ -27,6 +31,10 @@ export const authService = {
 
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
     const res = await apiPost<ApiResponse<IUser>>('/auth/register', payload);
+    const token = (res.data as any).token || (res.data as any).data?.token;
+    if (token) {
+      localStorage.setItem('voyage_token', token);
+    }
     return {
       success: res.data.success,
       message: res.data.message,
@@ -35,7 +43,11 @@ export const authService = {
   },
 
   logout: async (): Promise<void> => {
-    await apiPost('/auth/logout');
+    try {
+      await apiPost('/auth/logout');
+    } finally {
+      localStorage.removeItem('voyage_token');
+    }
   },
 
   getMe: async (): Promise<IUser> => {

@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -15,6 +15,10 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(
   config => {
     config.headers['Content-Type'] = config.headers['Content-Type'] || 'application/json';
+    const token = localStorage.getItem('voyage_token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
   error => Promise.reject(error)
