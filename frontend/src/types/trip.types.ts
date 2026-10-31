@@ -8,6 +8,8 @@ export enum ITripStatus {
 export interface IDestination {
   country: string;
   city: string;
+  name?: string;
+  region?: string;
   startingLocation?: string;
   additionalDestinations?: string[];
 }
@@ -15,21 +17,26 @@ export interface IDestination {
 export interface ITravelDates {
   departureDate: string;
   returnDate: string;
+  start?: string | Date;
+  end?: string | Date;
   duration?: number;
   isFlexible?: boolean;
 }
 
 export interface ITravellers {
-  type: 'solo' | 'couple' | 'friends' | 'family' | 'business';
+  type?: 'solo' | 'couple' | 'friends' | 'family' | 'business';
   adults: number;
   children: number;
+  infants?: number;
 }
 
 export interface IBudget {
   amount: number;
+  total?: number;
   currency: string;
-  isPerPerson: boolean;
-  category: 'budget' | 'comfort' | 'luxury';
+  isPerPerson?: boolean;
+  perPerson?: boolean;
+  category?: 'budget' | 'comfort' | 'luxury';
 }
 
 export interface IPreferences {

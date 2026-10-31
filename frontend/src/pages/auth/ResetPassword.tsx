@@ -81,11 +81,14 @@ export const ResetPassword: React.FC = () => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label htmlFor="reset-new-password" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-accent-400" /> New Password
                 </label>
                 <Input
+                  id="reset-new-password"
+                  name="newPassword"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -95,11 +98,14 @@ export const ResetPassword: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label htmlFor="reset-confirm-password" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-accent-400" /> Confirm New Password
                 </label>
                 <Input
+                  id="reset-confirm-password"
+                  name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

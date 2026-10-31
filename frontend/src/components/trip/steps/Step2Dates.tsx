@@ -40,10 +40,12 @@ export const Step2Dates: React.FC<Step2DatesProps> = ({ data, onChange }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+          <label htmlFor="dates-departure" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-accent-400" /> Departure Date *
           </label>
           <Input
+            id="dates-departure"
+            name="departureDate"
             type="date"
             value={data.departureDate}
             onChange={(e) => handleDepChange(e.target.value)}
@@ -52,10 +54,12 @@ export const Step2Dates: React.FC<Step2DatesProps> = ({ data, onChange }) => {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+          <label htmlFor="dates-return" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-accent-400" /> Return Date *
           </label>
           <Input
+            id="dates-return"
+            name="returnDate"
             type="date"
             value={data.returnDate}
             min={data.departureDate}
@@ -78,8 +82,10 @@ export const Step2Dates: React.FC<Step2DatesProps> = ({ data, onChange }) => {
         </div>
 
         {/* Flexible Dates Toggle */}
-        <label className="flex items-center gap-2 cursor-pointer select-none">
+        <label htmlFor="dates-flexible" className="flex items-center gap-2 cursor-pointer select-none">
           <input
+            id="dates-flexible"
+            name="isFlexible"
             type="checkbox"
             checked={!!data.isFlexible}
             onChange={(e) => onChange({ isFlexible: e.target.checked })}

@@ -1,18 +1,21 @@
 import rateLimit from 'express-rate-limit';
 import { sendError } from '../shared/response';
 import { Request, Response } from 'express';
+import { env } from '../config/env';
+
+const isDev = env.NODE_ENV === 'development';
 
 function rateLimitHandler(_req: Request, res: Response): void {
   sendError(res, 'Too many requests. Please try again later.', 429);
 }
 
 /**
- * Auth rate limiter: 5 requests per 15 minutes.
+ * Auth rate limiter: 20 requests per 15 minutes in prod, 1000 in dev.
  * Applied to login and forgot-password routes.
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: isDev ? 1000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitHandler,
@@ -21,11 +24,11 @@ export const authLimiter = rateLimit({
 });
 
 /**
- * General API rate limiter: 100 requests per 15 minutes.
+ * General API rate limiter: 500 requests per 15 minutes in prod, 10000 in dev.
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: isDev ? 10000 : 500,
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitHandler,
@@ -33,14 +36,14 @@ export const apiLimiter = rateLimit({
 });
 
 /**
- * AI generation rate limiter: 10 requests per hour.
+ * AI generation rate limiter: 20 requests per hour in prod, 200 in dev.
  * Applied to AI itinerary generation routes.
  */
 export const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
+  max: isDev ? 200 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitHandler,
-  message: 'AI generation limit reached. You can generate up to 10 itineraries per hour.',
+  message: 'AI generation limit reached. You can generate up to 20 itineraries per hour.',
 });

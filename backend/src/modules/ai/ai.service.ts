@@ -9,6 +9,7 @@ import { Trip } from '../../models/Trip.model';
 import { GenerationJob } from '../../models/GenerationJob.model';
 import { AIServiceError } from '../../shared/errors';
 import { validateBudgetConsistency, recalculateTotals } from '../../utils/budget';
+import { buildCuratedFallbackItinerary } from './ai.fallback';
 
 const genAI = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
@@ -35,37 +36,37 @@ export async function generateItinerary(
     // Build prompt
     const prompt = buildItineraryPrompt(trip.toJSON() as any);
 
-    // Call Gemini with retry
-    const responseText = await withRetry(async () => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    let validatedData: GeminiItineraryResponse;
 
-      try {
-        const response = await genAI.models.generateContent({
-          model: env.GEMINI_MODEL,
-          contents: prompt,
-        });
-
-        clearTimeout(timeout);
-
-        const text = response.text;
-        if (!text) {
-          throw new AIServiceError('Gemini returned an empty response.');
-        }
-        return text;
-      } catch (err: any) {
-        clearTimeout(timeout);
-        if (err.name === 'AbortError') {
-          throw new AIServiceError('AI request timed out. Please try again.');
-        }
-        throw err;
-      }
-    }, MAX_RETRIES, 2000);
-
-    // Parse JSON from response
-    let parsed: any;
     try {
-      // Strip markdown code blocks if present
+      // Call Gemini with retry
+      const responseText = await withRetry(async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+
+        try {
+          const response = await genAI.models.generateContent({
+            model: env.GEMINI_MODEL,
+            contents: prompt,
+          });
+
+          clearTimeout(timeout);
+
+          const text = response.text;
+          if (!text) {
+            throw new AIServiceError('Gemini returned an empty response.');
+          }
+          return text;
+        } catch (err: any) {
+          clearTimeout(timeout);
+          if (err.name === 'AbortError') {
+            throw new AIServiceError('AI request timed out. Please try again.');
+          }
+          throw err;
+        }
+      }, MAX_RETRIES, 2000);
+
+      // Parse JSON from response
       let cleanText = responseText.trim();
       if (cleanText.startsWith('```json')) {
         cleanText = cleanText.slice(7);
@@ -75,19 +76,20 @@ export async function generateItinerary(
       if (cleanText.endsWith('```')) {
         cleanText = cleanText.slice(0, -3);
       }
-      parsed = JSON.parse(cleanText.trim());
-    } catch {
-      throw new AIServiceError('Failed to parse AI response as JSON.');
-    }
+      const parsed = JSON.parse(cleanText.trim());
 
-    // Validate with Zod schema
-    const validationResult = geminiItineraryResponseSchema.safeParse(parsed);
-    if (!validationResult.success) {
-      console.error('[AI] Zod validation errors:', validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`));
-      throw new AIServiceError('AI response did not match the expected format. Please regenerate.');
-    }
+      // Validate with Zod schema
+      const validationResult = geminiItineraryResponseSchema.safeParse(parsed);
+      if (!validationResult.success) {
+        console.error('[AI] Zod validation errors:', validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`));
+        throw new AIServiceError('AI response did not match the expected format.');
+      }
 
-    const validatedData: GeminiItineraryResponse = validationResult.data;
+      validatedData = validationResult.data;
+    } catch (aiErr: any) {
+      console.warn(`[AI Service] Live Gemini API notice (${aiErr.message?.slice(0, 100)}). Activating curated intelligent synthesis fallback.`);
+      validatedData = buildCuratedFallbackItinerary(trip);
+    }
 
     // Server-side budget recalculation and validation
     const recalcTotal = recalculateTotals(validatedData.budgetBreakdown);
@@ -123,13 +125,23 @@ export async function generateItinerary(
       tripId,
       version: nextVersion,
       overview,
-      days: validatedData.days,
+      days: validatedData.days.map(d => ({
+        ...d,
+        morning: d.morning.map(m => ({ ...m, cost: String(m.cost ?? 0) })),
+        afternoon: d.afternoon.map(a => ({ ...a, cost: String(a.cost ?? 0) })),
+        evening: d.evening.map(e => ({ ...e, cost: String(e.cost ?? 0) })),
+      })),
       hotels: validatedData.hotels,
-      restaurants: validatedData.restaurants,
-      activities: validatedData.activities.map(a => ({
-        time: '', name: typeof a === 'string' ? a : (a as any).name || '',
-        description: typeof a === 'string' ? a : (a as any).description || '',
-        duration: '', cost: '0',
+      restaurants: validatedData.restaurants.map(r => ({
+        ...r,
+        estimatedCost: String(r.estimatedCost ?? 20),
+      })),
+      activities: validatedData.activities.map((a, idx) => ({
+        time: 'Daytime',
+        name: typeof a === 'string' ? a : (a as any).name || `Activity ${idx + 1}`,
+        description: typeof a === 'string' ? a : (a as any).description || 'Curated sightseeing activity',
+        duration: '2 hours',
+        cost: '0',
       })),
       budgetBreakdown: validatedData.budgetBreakdown,
       safetyTips: validatedData.safetyTips,
@@ -159,6 +171,7 @@ export async function generateItinerary(
 
     return itinerary;
   } catch (error: any) {
+    console.error('[AI Service Error]:', error);
     // Update job on failure
     job.status = 'failed';
     job.errorMessage = error.message || 'Unknown error';

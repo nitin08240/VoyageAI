@@ -30,10 +30,12 @@ export const Step4Budget: React.FC<Step4BudgetProps> = ({ data, onChange }) => {
       {/* Budget Amount + Currency Input */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="sm:col-span-2">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+          <label htmlFor="budget-amount" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
             Target Budget Amount *
           </label>
           <Input
+            id="budget-amount"
+            name="budgetAmount"
             type="number"
             min="100"
             step="50"
@@ -45,10 +47,12 @@ export const Step4Budget: React.FC<Step4BudgetProps> = ({ data, onChange }) => {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+          <label htmlFor="budget-currency" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
             Currency
           </label>
           <select
+            id="budget-currency"
+            name="budgetCurrency"
             value={data.currency}
             onChange={(e) => onChange({ currency: e.target.value })}
             className="w-full px-4 py-3 rounded-xl bg-navy-900 border border-white/10 text-white font-medium focus:border-accent-400 focus:outline-none"
@@ -68,8 +72,10 @@ export const Step4Budget: React.FC<Step4BudgetProps> = ({ data, onChange }) => {
           <div className="text-sm font-semibold text-white">Per Person Calculation</div>
           <div className="text-xs text-slate-400">Interpret entered amount as individual budget</div>
         </div>
-        <label className="relative inline-flex items-center cursor-pointer">
+        <label htmlFor="budget-per-person" className="relative inline-flex items-center cursor-pointer">
           <input
+            id="budget-per-person"
+            name="isPerPerson"
             type="checkbox"
             checked={data.isPerPerson}
             onChange={(e) => onChange({ isPerPerson: e.target.checked })}

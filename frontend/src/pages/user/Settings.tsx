@@ -112,12 +112,14 @@ export const Settings: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <label className="flex items-center justify-between p-3.5 rounded-2xl bg-navy-900/40 border border-white/5 cursor-pointer">
+            <label htmlFor="settings-email-alerts" className="flex items-center justify-between p-3.5 rounded-2xl bg-navy-900/40 border border-white/5 cursor-pointer">
               <div>
                 <div className="text-xs font-semibold text-white">Trip Generation Emails</div>
                 <div className="text-[11px] text-slate-400">Receive downloadable PDF links when generation completes</div>
               </div>
               <input
+                id="settings-email-alerts"
+                name="emailAlerts"
                 type="checkbox"
                 checked={emailAlerts}
                 onChange={(e) => setEmailAlerts(e.target.checked)}
@@ -125,12 +127,14 @@ export const Settings: React.FC = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between p-3.5 rounded-2xl bg-navy-900/40 border border-white/5 cursor-pointer">
+            <label htmlFor="settings-budget-alerts" className="flex items-center justify-between p-3.5 rounded-2xl bg-navy-900/40 border border-white/5 cursor-pointer">
               <div>
                 <div className="text-xs font-semibold text-white">Budget Variance Warnings</div>
                 <div className="text-[11px] text-slate-400">Get highlighted warnings if live rate estimates exceed threshold</div>
               </div>
               <input
+                id="settings-budget-alerts"
+                name="budgetAlerts"
                 type="checkbox"
                 checked={budgetAlerts}
                 onChange={(e) => setBudgetAlerts(e.target.checked)}

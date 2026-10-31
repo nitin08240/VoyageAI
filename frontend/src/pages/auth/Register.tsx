@@ -98,11 +98,14 @@ export const Register: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="reg-name" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-accent-400" /> Full Name
               </label>
               <Input
+                id="reg-name"
+                name="name"
                 type="text"
+                autoComplete="name"
                 placeholder="Eleanor Vance"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -112,11 +115,14 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="reg-email" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-accent-400" /> Email Address
               </label>
               <Input
+                id="reg-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@domain.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -126,11 +132,14 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="reg-password" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-accent-400" /> Password (Min. 8 chars)
               </label>
               <Input
+                id="reg-password"
+                name="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -153,11 +162,14 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="reg-confirm-password" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-accent-400" /> Confirm Password
               </label>
               <Input
+                id="reg-confirm-password"
+                name="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

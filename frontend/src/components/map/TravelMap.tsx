@@ -81,7 +81,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         id: `r-${i}`,
         type: 'restaurant',
         title: r.name,
-        subtitle: `${r.cuisine} • ${r.costEstimate}`,
+        subtitle: `${r.cuisine} • ${(r as any).estimatedCost || (r as any).costEstimate || '$20'}`,
         coordinates: r.coordinates,
       });
     }

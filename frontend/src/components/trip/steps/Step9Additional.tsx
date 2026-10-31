@@ -78,7 +78,7 @@ export const Step9Additional: React.FC<Step9AdditionalProps> = ({ data, onChange
 
       {/* Toggles */}
       <div className="space-y-3 pt-2">
-        <label className="flex items-center justify-between p-4 rounded-xl bg-navy-900/40 border border-white/10 cursor-pointer">
+        <label htmlFor="toggle-accessibility" className="flex items-center justify-between p-4 rounded-xl bg-navy-900/40 border border-white/10 cursor-pointer">
           <div className="flex items-center gap-3">
             <Accessibility className="w-5 h-5 text-accent-400" />
             <div>
@@ -87,6 +87,8 @@ export const Step9Additional: React.FC<Step9AdditionalProps> = ({ data, onChange
             </div>
           </div>
           <input
+            id="toggle-accessibility"
+            name="accessibilityRequired"
             type="checkbox"
             checked={add.accessibilityRequired}
             onChange={(e) => updateAdd({ accessibilityRequired: e.target.checked })}
@@ -94,7 +96,7 @@ export const Step9Additional: React.FC<Step9AdditionalProps> = ({ data, onChange
           />
         </label>
 
-        <label className="flex items-center justify-between p-4 rounded-xl bg-navy-900/40 border border-white/10 cursor-pointer">
+        <label htmlFor="toggle-elderly" className="flex items-center justify-between p-4 rounded-xl bg-navy-900/40 border border-white/10 cursor-pointer">
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 text-accent-400" />
             <div>
@@ -103,6 +105,8 @@ export const Step9Additional: React.FC<Step9AdditionalProps> = ({ data, onChange
             </div>
           </div>
           <input
+            id="toggle-elderly"
+            name="childrenOrElderly"
             type="checkbox"
             checked={add.childrenOrElderly}
             onChange={(e) => updateAdd({ childrenOrElderly: e.target.checked })}

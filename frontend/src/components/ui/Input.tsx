@@ -11,8 +11,10 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, leftIcon, rightIcon, onRightIconClick, className, id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  ({ label, error, helperText, leftIcon, rightIcon, onRightIconClick, className, id, name, ...props }, ref) => {
+    const generatedId = React.useId();
+    const inputId = id || name || (label ? label.toLowerCase().replace(/[^a-z0-9]+/g, '-') : generatedId);
+    const inputName = name || inputId;
 
     return (
       <div className="w-full">
@@ -33,6 +35,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            name={inputName}
+            aria-label={!label ? (props['aria-label'] || props.placeholder || inputName) : undefined}
             className={cn(
               'w-full h-11 rounded-xl text-sm font-medium transition-all duration-200',
               'input-glass',

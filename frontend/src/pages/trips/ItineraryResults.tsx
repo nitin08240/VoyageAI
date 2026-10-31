@@ -232,17 +232,23 @@ export const ItineraryResults: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-accent-400" />
                 <span>
-                  {trip.dates.departureDate} &rarr; {trip.dates.returnDate} ({itinerary.days?.length || trip.dates.duration || 1} Days)
+                  {trip.dates?.departureDate || (trip.dates?.start ? new Date(trip.dates.start).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Upcoming')}
+                  {' → '}
+                  {trip.dates?.returnDate || (trip.dates?.end ? new Date(trip.dates.end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')}
+                  {' '}({itinerary.days?.length || trip.dates?.duration || 1} Days)
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-sky-400" />
-                <span className="capitalize">{trip.travellers.type} ({trip.travellers.adults} Adults)</span>
+                <span className="capitalize">
+                  {trip.travellers?.type ? `${trip.travellers.type} • ` : ''}
+                  {trip.travellers?.adults || 1} Adults{trip.travellers?.children ? `, ${trip.travellers.children} Children` : ''}
+                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Wallet className="w-4 h-4 text-emerald-400" />
                 <span>
-                  {trip.budget.currency} {trip.budget.amount.toLocaleString()} Budget
+                  {trip.budget?.currency || 'USD'} {(trip.budget?.amount ?? trip.budget?.total ?? itinerary.budgetBreakdown?.total ?? 0).toLocaleString()} Budget
                 </span>
               </div>
             </div>
@@ -425,18 +431,18 @@ export const ItineraryResults: React.FC = () => {
               <BudgetSummary
                 budget={
                   itinerary.budgetBreakdown || {
-                    total: trip.budget.amount,
-                    currency: trip.budget.currency,
-                    accommodation: Math.round(trip.budget.amount * 0.4),
-                    food: Math.round(trip.budget.amount * 0.25),
-                    transport: Math.round(trip.budget.amount * 0.15),
-                    activities: Math.round(trip.budget.amount * 0.15),
-                    miscellaneous: Math.round(trip.budget.amount * 0.05),
+                    total: trip.budget?.amount ?? trip.budget?.total ?? 2500,
+                    currency: trip.budget?.currency || 'USD',
+                    accommodation: Math.round((trip.budget?.amount ?? trip.budget?.total ?? 2500) * 0.4),
+                    food: Math.round((trip.budget?.amount ?? trip.budget?.total ?? 2500) * 0.25),
+                    transport: Math.round((trip.budget?.amount ?? trip.budget?.total ?? 2500) * 0.15),
+                    activities: Math.round((trip.budget?.amount ?? trip.budget?.total ?? 2500) * 0.15),
+                    miscellaneous: Math.round((trip.budget?.amount ?? trip.budget?.total ?? 2500) * 0.05),
                     breakdown: [],
                   }
                 }
-                targetBudget={trip.budget.amount}
-                travelerCount={trip.travellers.adults + (trip.travellers.children || 0)}
+                targetBudget={trip.budget?.amount ?? trip.budget?.total ?? 2500}
+                travelerCount={(trip.travellers?.adults || 1) + (trip.travellers?.children || 0)}
               />
             </div>
           )}
@@ -448,7 +454,14 @@ export const ItineraryResults: React.FC = () => {
                 destination={`${destCity}, ${destCountry}`}
                 hotels={itinerary.hotels || []}
                 restaurants={itinerary.restaurants || []}
-                activities={itinerary.days?.flatMap((d) => d.activities) || []}
+                activities={
+                  itinerary.days?.flatMap((d: any) => [
+                    ...(d.morning || []),
+                    ...(d.afternoon || []),
+                    ...(d.evening || []),
+                    ...(d.activities || []),
+                  ]) || []
+                }
               />
             </div>
           )}
@@ -503,11 +516,16 @@ export const ItineraryResults: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(Array.isArray(itinerary.packingChecklist?.categories)
-                  ? itinerary.packingChecklist.categories
+                {(Array.isArray(itinerary.packingChecklist)
+                  ? (itinerary.packingChecklist as any[]).map((c: any) => ({
+                      name: c.category || c.name || 'Essentials',
+                      items: Array.isArray(c.items) ? c.items.map((it: any) => (typeof it === 'string' ? { item: it, essential: true } : it)) : [],
+                    }))
+                  : Array.isArray((itinerary.packingChecklist as any)?.categories)
+                  ? (itinerary.packingChecklist as any).categories
                   : Object.entries((itinerary.packingChecklist as any) || {}).map(([name, items]) => ({
                       name,
-                      items: Array.isArray(items) ? items.map((it) => ({ item: it, essential: true })) : [],
+                      items: Array.isArray(items) ? (items as any[]).map((it) => (typeof it === 'string' ? { item: it, essential: true } : it)) : [],
                     }))
                 ).map((cat: any, idx: number) => (
                   <div key={idx} className="p-5 rounded-2xl bg-navy-950/60 border border-white/5 space-y-3">
@@ -517,13 +535,17 @@ export const ItineraryResults: React.FC = () => {
                     <ul className="space-y-2">
                       {cat.items?.map((item: any, i: number) => {
                         const itemName = typeof item === 'string' ? item : item.item;
+                        const packingId = `packing-${cat.name?.toLowerCase().replace(/\s+/g, '-')}-${i}`;
                         return (
                           <li key={i} className="flex items-center gap-2 text-xs text-slate-300">
                             <input
+                              id={packingId}
+                              name={packingId}
+                              aria-label={itemName}
                               type="checkbox"
                               className="rounded border-white/20 text-accent-500 focus:ring-accent-500 bg-navy-900 w-4 h-4 cursor-pointer"
                             />
-                            <span>{itemName}</span>
+                            <label htmlFor={packingId} className="cursor-pointer select-none">{itemName}</label>
                           </li>
                         );
                       })}
@@ -545,6 +567,9 @@ export const ItineraryResults: React.FC = () => {
               </p>
               <div className="flex items-center gap-2 p-2 rounded-xl bg-navy-950 border border-white/10">
                 <input
+                  id="share-link-input"
+                  name="shareLink"
+                  aria-label="Shareable itinerary link"
                   type="text"
                   readOnly
                   value={shareLink}

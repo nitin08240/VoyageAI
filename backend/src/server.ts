@@ -10,7 +10,7 @@ const PORT = parseInt(env.PORT, 10) || 5000;
 async function startServer(): Promise<void> {
   try {
     // Start Express server
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`
 ╔══════════════════════════════════════════════════╗
 ║              VoyageAI API Server                 ║

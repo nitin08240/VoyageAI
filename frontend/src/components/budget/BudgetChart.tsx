@@ -19,9 +19,9 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ budget }) => {
   const chartData = [
     { name: 'Accommodation', value: budget.accommodation || 0 },
     { name: 'Food & Dining', value: budget.food || 0 },
-    { name: 'Transportation', value: budget.transport || 0 },
+    { name: 'Transportation', value: (budget as any).transportation ?? budget.transport ?? 0 },
     { name: 'Activities & Tours', value: budget.activities || 0 },
-    { name: 'Miscellaneous', value: budget.miscellaneous || 0 },
+    { name: 'Miscellaneous', value: (budget as any).emergencyReserve ?? (budget as any).shopping ?? budget.miscellaneous ?? 0 },
   ].filter((item) => item.value > 0);
 
   const CustomTooltip = ({ active, payload }: any) => {

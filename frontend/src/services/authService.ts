@@ -17,28 +17,32 @@ interface ApiResponse<T> {
 
 export const authService = {
   login: async (payload: LoginPayload): Promise<AuthResponse> => {
-    const res = await apiPost<ApiResponse<IUser>>('/auth/login', payload);
-    const token = (res.data as any).token || (res.data as any).data?.token;
+    const res = await apiPost<ApiResponse<any>>('/auth/login', payload);
+    const data = res.data?.data;
+    const token = data?.token || (res.data as any)?.token;
     if (token) {
       localStorage.setItem('voyage_token', token);
     }
+    const user = data?.user || res.data?.user || data;
     return {
       success: res.data.success,
       message: res.data.message,
-      user: res.data.user ?? res.data.data,
+      user,
     };
   },
 
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
-    const res = await apiPost<ApiResponse<IUser>>('/auth/register', payload);
-    const token = (res.data as any).token || (res.data as any).data?.token;
+    const res = await apiPost<ApiResponse<any>>('/auth/register', payload);
+    const data = res.data?.data;
+    const token = data?.token || (res.data as any)?.token;
     if (token) {
       localStorage.setItem('voyage_token', token);
     }
+    const user = data?.user || res.data?.user || data;
     return {
       success: res.data.success,
       message: res.data.message,
-      user: res.data.user ?? res.data.data,
+      user,
     };
   },
 
@@ -50,9 +54,13 @@ export const authService = {
     }
   },
 
-  getMe: async (): Promise<IUser> => {
-    const res = await apiGet<ApiResponse<IUser>>('/auth/me');
-    return (res.data.user ?? res.data.data) as IUser;
+  getMe: async (): Promise<IUser | null> => {
+    const res = await apiGet<ApiResponse<any>>('/auth/me');
+    const data = res.data?.data;
+    if (data && 'user' in data) {
+      return (data.user || null) as IUser | null;
+    }
+    return (res.data?.user ?? data ?? null) as IUser | null;
   },
 
   forgotPassword: async (payload: ForgotPasswordPayload): Promise<AuthResponse> => {

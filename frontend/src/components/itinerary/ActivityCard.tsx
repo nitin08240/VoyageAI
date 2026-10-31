@@ -26,7 +26,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onToggleCo
       <div className="flex items-start justify-between gap-4 mb-2">
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-accent-500/10 text-accent-400 border border-accent-500/20">
-            {activity.timeOfDay || 'Scheduled'}
+            {activity.time || activity.timeOfDay || 'Scheduled'}
           </span>
           <span className="text-xs text-slate-400 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" /> {activity.duration || '2 hours'}
@@ -56,29 +56,33 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onToggleCo
 
       {/* Meta Bar: Cost, Transit, Map */}
       <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-white/5 text-xs text-slate-400">
-        {activity.estimatedCost !== undefined && (
-          <div className="flex items-center gap-1 font-semibold text-emerald-400">
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>{activity.estimatedCost === 0 ? 'Free' : `$${activity.estimatedCost}`}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-1 font-semibold text-emerald-400">
+          <DollarSign className="w-3.5 h-3.5" />
+          <span>
+            {activity.cost === '0' || activity.cost === 0 || activity.estimatedCost === 0 ? 'Free' : `$${activity.cost || activity.estimatedCost || '15'}`}
+          </span>
+        </div>
 
-        {activity.transportToNext && (
+        {(activity.transportation || activity.transportToNext) && (
           <div className="flex items-center gap-1">
             <Navigation className="w-3.5 h-3.5 text-accent-400" />
-            <span>Transit: {activity.transportToNext}</span>
+            <span>Transit: {activity.transportation || activity.transportToNext}</span>
           </div>
         )}
 
-        {activity.location && (
+        {(activity.coordinates || activity.location) && (
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`}
+            href={
+              activity.coordinates
+                ? `https://www.google.com/maps/search/?api=1&query=${activity.coordinates.lat},${activity.coordinates.lng}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location || '')}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-accent-400 hover:underline ml-auto"
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>Directions</span>
+            <span>Map Pin</span>
           </a>
         )}
       </div>

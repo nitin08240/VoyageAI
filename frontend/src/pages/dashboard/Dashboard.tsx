@@ -19,8 +19,8 @@ export const Dashboard: React.FC = () => {
 
   const totalTrips = trips.length;
   const completedTrips = trips.filter((t) => t.status === 'completed').length;
-  const totalDays = trips.reduce((acc, t) => acc + (t.dates.duration || 1), 0);
-  const totalBudgetManaged = trips.reduce((acc, t) => acc + (t.budget.amount || 0), 0);
+  const totalDays = trips.reduce((acc, t) => acc + (t.dates?.duration || 1), 0);
+  const totalBudgetManaged = trips.reduce((acc, t) => acc + (t.budget?.amount ?? t.budget?.total ?? 0), 0);
 
   return (
     <PageWrapper>
@@ -98,9 +98,11 @@ export const Dashboard: React.FC = () => {
               <Sparkles className="w-4 h-4 text-purple-400" /> AI Engine
             </div>
             <div className="text-2xl sm:text-3xl font-serif font-bold text-white">
-              Gemini 2.0
+              Gemini 3.8
             </div>
-            <div className="text-[11px] text-emerald-400 mt-1 font-semibold">Operational</div>
+            <div className="text-[11px] text-emerald-400 mt-1 font-semibold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live & Ready
+            </div>
           </div>
         </div>
 
@@ -128,6 +130,10 @@ export const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {trips.slice(0, 3).map((trip) => {
                 const isReady = trip.status === 'completed';
+                const depStr = trip.dates?.departureDate || (trip.dates?.start ? new Date(trip.dates.start).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Upcoming');
+                const retStr = trip.dates?.returnDate || (trip.dates?.end ? new Date(trip.dates.end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+                const budgetVal = trip.budget?.amount ?? trip.budget?.total ?? 0;
+
                 return (
                   <div
                     key={trip._id}
@@ -141,24 +147,24 @@ export const Dashboard: React.FC = () => {
                           {trip.status}
                         </Badge>
                         <span className="text-xs font-bold text-accent-400">
-                          {trip.budget.currency} {trip.budget.amount.toLocaleString()}
+                          {trip.budget?.currency || 'USD'} {budgetVal.toLocaleString()}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
                         <MapPin className="w-3.5 h-3.5 text-accent-400" />
-                        <span>{trip.destination.country}</span>
+                        <span>{trip.destination?.country || 'Worldwide'}</span>
                       </div>
 
                       <h3 className="text-xl font-serif font-bold text-white mb-2">
-                        {trip.destination.city || (trip.destination as any).name || 'Custom Trip'}
+                        {trip.destination?.city || trip.destination?.name || 'Custom Trip'}
                       </h3>
 
                       <div className="text-xs text-slate-400 space-y-1 mb-4">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5" />
                           <span>
-                            {trip.dates.departureDate} &rarr; {trip.dates.returnDate} ({trip.dates.duration || 1}d)
+                            {depStr} {retStr ? `→ ${retStr}` : ''} ({trip.dates?.duration || 1}d)
                           </span>
                         </div>
                       </div>

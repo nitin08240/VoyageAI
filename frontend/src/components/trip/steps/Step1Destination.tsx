@@ -38,10 +38,12 @@ export const Step1Destination: React.FC<Step1DestinationProps> = ({ data, onChan
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+          <label htmlFor="dest-country" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
             <Globe2 className="w-4 h-4 text-accent-400" /> Country *
           </label>
           <Input
+            id="dest-country"
+            name="country"
             placeholder="e.g. Japan, Italy, Switzerland"
             value={data.country}
             onChange={(e) => onChange({ country: e.target.value })}
@@ -50,10 +52,12 @@ export const Step1Destination: React.FC<Step1DestinationProps> = ({ data, onChan
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+          <label htmlFor="dest-city" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
             <Building2 className="w-4 h-4 text-accent-400" /> City / Region *
           </label>
           <Input
+            id="dest-city"
+            name="city"
             placeholder="e.g. Kyoto, Amalfi Coast, Zurich"
             value={data.city}
             onChange={(e) => onChange({ city: e.target.value })}
@@ -63,10 +67,12 @@ export const Step1Destination: React.FC<Step1DestinationProps> = ({ data, onChan
       </div>
 
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+        <label htmlFor="dest-startingLocation" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
           <MapPin className="w-4 h-4 text-accent-400" /> Starting Location / Airport *
         </label>
         <Input
+          id="dest-startingLocation"
+          name="startingLocation"
           placeholder="e.g. New York (JFK), London (LHR), Mumbai (BOM)"
           value={data.startingLocation || ''}
           onChange={(e) => onChange({ startingLocation: e.target.value })}

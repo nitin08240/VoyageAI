@@ -18,10 +18,19 @@ export async function withRetry<T>(
         error?.message?.includes('high demand') ||
         error?.message?.includes('UNAVAILABLE');
 
+      const isDailyQuotaExhausted =
+        error?.message?.includes('RESOURCE_EXHAUSTED') ||
+        error?.message?.includes('daily limit') ||
+        error?.message?.includes('limit: 20');
+
+      if (isDailyQuotaExhausted) {
+        // Daily free tier quota exhausted; do not retry, immediately fallback
+        throw error;
+      }
+
       const isRateLimit =
         error?.status === 429 ||
-        error?.message?.includes('429') ||
-        error?.message?.includes('RESOURCE_EXHAUSTED');
+        error?.message?.includes('429');
 
       const isTransient =
         error?.status >= 500 ||

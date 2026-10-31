@@ -49,10 +49,12 @@ export const Step8Food: React.FC<Step8FoodProps> = ({ data, onChange }) => {
       </div>
 
       <div className="pt-4 border-t border-white/10">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+        <label htmlFor="food-restrictions" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
           <AlertCircle className="w-4 h-4 text-accent-400" /> Allergies or Food Restrictions
         </label>
         <Input
+          id="food-restrictions"
+          name="foodRestrictions"
           placeholder="e.g. Gluten-free, peanut allergy, Halal, Kosher, no shell fish"
           value={data.food.restrictions || ''}
           onChange={(e) => onChange({ food: { ...data.food, restrictions: e.target.value } })}

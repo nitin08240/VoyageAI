@@ -18,12 +18,16 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
   const variance = Math.abs(targetBudget - budget.total);
   const perPerson = Math.round(budget.total / Math.max(1, travelerCount));
 
+  const currency = (budget as any).currency || 'USD';
+  const transportAmt = (budget as any).transportation ?? budget.transport ?? 0;
+  const misc = (budget as any).emergencyReserve ?? (budget as any).shopping ?? budget.miscellaneous ?? 0;
+
   const categories = [
-    { label: 'Accommodation', amount: budget.accommodation, color: 'bg-orange-500' },
-    { label: 'Food & Dining', amount: budget.food, color: 'bg-sky-400' },
-    { label: 'Transportation', amount: budget.transport, color: 'bg-emerald-400' },
-    { label: 'Activities & Attractions', amount: budget.activities, color: 'bg-purple-400' },
-    { label: 'Miscellaneous & Contingency', amount: budget.miscellaneous, color: 'bg-rose-400' },
+    { label: 'Accommodation', amount: budget.accommodation || 0, color: 'bg-orange-500' },
+    { label: 'Food & Dining', amount: budget.food || 0, color: 'bg-sky-400' },
+    { label: 'Transportation', amount: transportAmt, color: 'bg-emerald-400' },
+    { label: 'Activities & Attractions', amount: budget.activities || 0, color: 'bg-purple-400' },
+    { label: 'Miscellaneous & Contingency', amount: misc, color: 'bg-rose-400' },
   ];
 
   return (
@@ -35,7 +39,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
           <div>
             <div className="text-sm font-bold text-amber-300">Target Budget Exceeded</div>
             <div className="text-xs text-amber-200/80 mt-0.5">
-              The estimated total exceeds your target by {budget.currency} {variance.toLocaleString()}. Consider adjusting stay tier or activities.
+              The estimated total exceeds your target by {currency} {variance.toLocaleString()}. Consider adjusting stay tier or activities.
             </div>
           </div>
         </div>
@@ -45,7 +49,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
           <div>
             <div className="text-sm font-bold text-emerald-300">Within Planned Budget</div>
             <div className="text-xs text-emerald-200/80 mt-0.5">
-              Estimated expenses fit your budget with {budget.currency} {variance.toLocaleString()} buffer remaining.
+              Estimated expenses fit your budget with {currency} {variance.toLocaleString()} buffer remaining.
             </div>
           </div>
         </div>
@@ -58,7 +62,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
             <Wallet className="w-4 h-4 text-accent-400" /> Target Budget
           </div>
           <div className="text-2xl font-serif font-bold text-white">
-            {budget.currency} {targetBudget.toLocaleString()}
+            {currency} {targetBudget.toLocaleString()}
           </div>
         </div>
 
@@ -67,7 +71,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
             <TrendingUp className="w-4 h-4 text-emerald-400" /> Estimated Spend
           </div>
           <div className="text-2xl font-serif font-bold text-white">
-            {budget.currency} {budget.total.toLocaleString()}
+            {currency} {budget.total.toLocaleString()}
           </div>
         </div>
 
@@ -76,7 +80,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
             <Users className="w-4 h-4 text-sky-400" /> Per Person
           </div>
           <div className="text-2xl font-serif font-bold text-white">
-            {budget.currency} {perPerson.toLocaleString()}
+            {currency} {perPerson.toLocaleString()}
           </div>
         </div>
       </div>

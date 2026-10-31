@@ -74,11 +74,18 @@ export const Footer: React.FC = () => {
               </p>
               <div className="flex gap-2">
                 <input
+                  id="newsletter-email"
+                  name="newsletterEmail"
                   type="email"
+                  aria-label="Enter your email for the newsletter"
                   placeholder="Enter your email"
                   className="flex-1 h-10 px-4 text-sm input-glass rounded-xl"
                 />
-                <button className="w-10 h-10 btn-accent rounded-xl flex items-center justify-center flex-shrink-0">
+                <button
+                  type="button"
+                  aria-label="Subscribe to newsletter"
+                  className="w-10 h-10 btn-accent rounded-xl flex items-center justify-center flex-shrink-0"
+                >
                   <Send size={16} className="text-white" />
                 </button>
               </div>

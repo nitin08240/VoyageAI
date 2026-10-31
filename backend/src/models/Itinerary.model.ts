@@ -87,13 +87,13 @@ const coordinatesSchema = new Schema(
 
 const activitySchema = new Schema<IActivitySubdoc>(
   {
-    time: { type: String, required: true },
+    time: { type: String, default: 'Flexible' },
     name: { type: String, required: true },
-    description: { type: String, required: true },
-    duration: { type: String, required: true },
-    cost: { type: String, required: true },
-    travelTime: { type: String },
-    transportation: { type: String },
+    description: { type: String, default: '' },
+    duration: { type: String, default: 'Flexible' },
+    cost: { type: String, default: '0' },
+    travelTime: { type: String, default: '' },
+    transportation: { type: String, default: '' },
     mapLink: { type: String },
     coordinates: { type: coordinatesSchema },
   },

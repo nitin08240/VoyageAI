@@ -94,6 +94,9 @@ export const MyTrips: React.FC = () => {
           <div className="w-full sm:w-80 relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
+              id="trips-search"
+              name="search"
+              aria-label="Search destination"
               type="text"
               placeholder="Search destination..."
               value={searchQuery}
@@ -133,6 +136,9 @@ export const MyTrips: React.FC = () => {
             {filteredTrips.map((trip) => {
               const tripId = trip._id || (trip as any).id;
               const isReady = trip.status === 'completed';
+              const depStr = trip.dates?.departureDate || (trip.dates?.start ? new Date(trip.dates.start).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Upcoming');
+              const retStr = trip.dates?.returnDate || (trip.dates?.end ? new Date(trip.dates.end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+              const budgetVal = trip.budget?.amount ?? trip.budget?.total ?? 0;
 
               return (
                 <div
@@ -147,24 +153,24 @@ export const MyTrips: React.FC = () => {
                         {trip.status}
                       </Badge>
                       <span className="text-xs font-bold text-accent-400">
-                        {trip.budget.currency} {trip.budget.amount.toLocaleString()}
+                        {trip.budget?.currency || 'USD'} {budgetVal.toLocaleString()}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
                       <MapPin className="w-3.5 h-3.5 text-accent-400" />
-                      <span>{trip.destination.country}</span>
+                      <span>{trip.destination?.country || 'Worldwide'}</span>
                     </div>
 
                     <h3 className="text-xl font-serif font-bold text-white mb-2">
-                      {trip.destination.city || (trip.destination as any).name || 'Custom Trip'}
+                      {trip.destination?.city || trip.destination?.name || 'Custom Trip'}
                     </h3>
 
                     <div className="space-y-1 text-xs text-slate-400 mb-4">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5" />
                         <span>
-                          {trip.dates.departureDate} &rarr; {trip.dates.returnDate} ({trip.dates.duration || 1}d)
+                          {depStr} {retStr ? `→ ${retStr}` : ''} ({trip.dates?.duration || 1}d)
                         </span>
                       </div>
                     </div>
