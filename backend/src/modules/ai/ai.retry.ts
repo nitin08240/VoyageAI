@@ -1,7 +1,7 @@
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries = 3,
-  initialDelayMs = 1500
+  maxRetries = 5,
+  initialDelayMs = 2000
 ): Promise<T> {
   let attempt = 0;
   let delay = initialDelayMs;
@@ -11,23 +11,46 @@ export async function withRetry<T>(
       return await fn();
     } catch (error: any) {
       attempt++;
-      // Don't retry on non-retryable errors (e.g. invalid client inputs or schema validation failure that won't change)
-      const isRateLimit = error?.status === 429 || error?.message?.includes('429');
+
+      const isHighDemand =
+        error?.status === 503 ||
+        error?.message?.includes('503') ||
+        error?.message?.includes('high demand') ||
+        error?.message?.includes('UNAVAILABLE');
+
+      const isRateLimit =
+        error?.status === 429 ||
+        error?.message?.includes('429') ||
+        error?.message?.includes('RESOURCE_EXHAUSTED');
+
       const isTransient =
         error?.status >= 500 ||
         error?.code === 'ECONNRESET' ||
         error?.code === 'ETIMEDOUT' ||
         error?.message?.includes('fetch failed');
 
-      if (attempt >= maxRetries || (!isRateLimit && !isTransient)) {
+      if (attempt >= maxRetries || (!isHighDemand && !isRateLimit && !isTransient)) {
         throw error;
       }
 
-      console.warn(`[AI Retry] Attempt ${attempt}/${maxRetries} failed: ${error?.message || error}. Retrying in ${delay}ms...`);
-      await new Promise((res) => setTimeout(res, delay));
-      delay *= 2; // Exponential backoff
+      // Add a slight jitter (0-500ms) to prevent thundering herd
+      const jitter = Math.floor(Math.random() * 500);
+      const waitTime = delay + jitter;
+
+      if (isHighDemand) {
+        console.warn(
+          `⏳ [AI Retry] Google Gemini is experiencing temporary high demand (503). Retrying (${attempt}/${maxRetries}) in ${(waitTime / 1000).toFixed(1)}s...`
+        );
+      } else {
+        console.warn(
+          `⚠️ [AI Retry] Attempt ${attempt}/${maxRetries} failed (${error?.message || error}). Retrying in ${(waitTime / 1000).toFixed(1)}s...`
+        );
+      }
+
+      await new Promise((res) => setTimeout(res, waitTime));
+      delay = Math.min(delay * 1.8, 15000); // Gradual exponential backoff up to 15s
     }
   }
 
-  throw new Error('Max retries exceeded');
+  throw new Error('Gemini API is currently busy. Please wait a moment and try again.');
 }
