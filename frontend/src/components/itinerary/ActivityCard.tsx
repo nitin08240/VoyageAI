@@ -65,6 +65,36 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         {activity.name}
       </h4>
 
+      {/* Attraction Photo if available */}
+      {(activity.imageUrl || activity.thumbUrl) && (
+        <div className="mb-3 w-full h-36 rounded-xl overflow-hidden relative bg-navy-950/60 border border-white/5 group">
+          <img
+            src={activity.imageUrl || activity.thumbUrl}
+            alt={activity.name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
+          {activity.imagePhotographer && (
+            <div className="absolute bottom-1 right-2 text-[9px] text-white/80 bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm">
+              Photo by{' '}
+              <a
+                href={activity.imagePhotographerUrl || 'https://unsplash.com?utm_source=voyageai&utm_medium=referral'}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="underline hover:text-white"
+              >
+                {activity.imagePhotographer}
+              </a>{' '}
+              on Unsplash
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="text-slate-300 text-xs leading-relaxed mb-4">
         {activity.description}
       </p>

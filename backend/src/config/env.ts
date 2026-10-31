@@ -18,11 +18,21 @@ const envSchema = z.object({
   EMAIL_USER: z.string().optional(),
   EMAIL_PASS: z.string().optional(),
   RESET_TOKEN_EXPIRY_MS: z.string().optional(),
+  UNSPLASH_ACCESS_KEY: z.string().optional(),
+  OPENWEATHER_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 function validateEnv(): Env {
+  // Normalize alternate environment key names
+  if (!process.env.UNSPLASH_ACCESS_KEY && process.env.ACCESS_KEY) {
+    process.env.UNSPLASH_ACCESS_KEY = process.env.ACCESS_KEY;
+  }
+  if (!process.env.OPENWEATHER_API_KEY && (process.env as any).OpenWeather) {
+    process.env.OPENWEATHER_API_KEY = (process.env as any).OpenWeather;
+  }
+
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {

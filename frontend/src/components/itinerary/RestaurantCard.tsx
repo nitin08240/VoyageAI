@@ -8,8 +8,28 @@ interface RestaurantCardProps {
 
 export const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) => {
   return (
-    <div className="p-6 rounded-2xl glass-card border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between h-full">
-      <div>
+    <div className="rounded-2xl glass-card border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between h-full overflow-hidden">
+      {/* Restaurant Photo if available */}
+      {(restaurant.imageUrl || restaurant.thumbUrl) && (
+        <div className="h-40 w-full relative overflow-hidden bg-navy-950/60">
+          <img
+            src={restaurant.imageUrl || restaurant.thumbUrl}
+            alt={restaurant.name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
+          {restaurant.imagePhotographer && (
+            <div className="absolute bottom-1 right-2 text-[9px] text-white/80 bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm">
+              Photo by {restaurant.imagePhotographer}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="p-6">
         <div className="flex items-start justify-between gap-2 mb-3">
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20">
             {restaurant.cuisine || 'Local Cuisine'}

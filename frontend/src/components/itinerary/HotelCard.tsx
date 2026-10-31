@@ -12,8 +12,28 @@ export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
     `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ' ' + (hotel.city || hotel.location))}`;
 
   return (
-    <div className="p-6 rounded-2xl glass-card border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between h-full">
-      <div>
+    <div className="rounded-2xl glass-card border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between h-full overflow-hidden">
+      {/* Hotel Photo if available */}
+      {(hotel.imageUrl || hotel.thumbUrl) && (
+        <div className="h-40 w-full relative overflow-hidden bg-navy-950/60">
+          <img
+            src={hotel.imageUrl || hotel.thumbUrl}
+            alt={hotel.name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
+          {hotel.imagePhotographer && (
+            <div className="absolute bottom-1 right-2 text-[9px] text-white/80 bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm">
+              Photo by {hotel.imagePhotographer}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="p-6">
         {/* Header & Badges */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">

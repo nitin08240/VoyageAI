@@ -11,6 +11,8 @@ import { AIServiceError } from '../../shared/errors';
 import { validateBudgetConsistency, recalculateTotals } from '../../utils/budget';
 import { buildCuratedFallbackItinerary } from './ai.fallback';
 import { geocodingService } from '../../services/geocoding.service';
+import { unsplashService } from '../../services/unsplash.service';
+import { weatherService } from '../../services/weather.service';
 
 const genAI = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
@@ -170,16 +172,21 @@ export async function generateItinerary(
     (job as any).itineraryId = itinerary._id;
     await job.save();
 
-    // Asynchronously resolve missing coordinates via OSM Nominatim
+    // Asynchronously resolve missing coordinates, Unsplash imagery, and OpenWeather forecasts
     const destContext = trip.destination?.city || trip.destination?.name || '';
-    geocodingService.geocodeItinerary(itinerary, destContext).then(async (modified) => {
-      if (modified) {
+    Promise.allSettled([
+      geocodingService.geocodeItinerary(itinerary, destContext),
+      unsplashService.enrichItineraryImages(itinerary, destContext),
+      weatherService.enrichItineraryWeather(itinerary, destContext, itinerary.hotels?.[0]?.coordinates),
+    ])
+      .then(async () => {
+        itinerary.markModified('destinationMedia');
         itinerary.markModified('hotels');
         itinerary.markModified('restaurants');
         itinerary.markModified('days');
         await itinerary.save();
-      }
-    }).catch(err => console.warn('[Background Geocode]', err.message));
+      })
+      .catch((err) => console.warn('[Background Enrichment]', err.message));
 
     return itinerary;
   } catch (error: any) {

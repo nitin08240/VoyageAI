@@ -1,3 +1,35 @@
+export interface IDayWeather {
+  forecastAvailable: boolean;
+  date: string;
+  temperature?: number;
+  minTemperature?: number;
+  maxTemperature?: number;
+  condition?: string;
+  description?: string;
+  icon?: string;
+  humidity?: number;
+  windSpeed?: number;
+  rainProbability?: number;
+  recommendations?: string[];
+  message?: string;
+  lastUpdated?: string | Date;
+}
+
+export interface IDestinationMedia {
+  heroUrl: string;
+  thumbUrl?: string;
+  photographer?: string;
+  photographerUrl?: string;
+  sourceUrl?: string;
+  gallery?: Array<{
+    url: string;
+    thumbUrl?: string;
+    alt?: string;
+    photographer?: string;
+    photographerUrl?: string;
+  }>;
+}
+
 export interface IActivity {
   id?: string;
   name: string;
@@ -20,6 +52,10 @@ export interface IActivity {
   bookingUrl?: string;
   tips?: string;
   completed?: boolean;
+  imageUrl?: string;
+  thumbUrl?: string;
+  imagePhotographer?: string;
+  imagePhotographerUrl?: string;
 }
 
 export interface IHotel {
@@ -39,6 +75,10 @@ export interface IHotel {
   verified?: boolean;
   checkIn?: string;
   checkOut?: string;
+  imageUrl?: string;
+  thumbUrl?: string;
+  imagePhotographer?: string;
+  imagePhotographerUrl?: string;
 }
 
 export interface IRestaurant {
@@ -53,6 +93,10 @@ export interface IRestaurant {
   timing?: string;
   rating?: number;
   verified?: boolean;
+  imageUrl?: string;
+  thumbUrl?: string;
+  imagePhotographer?: string;
+  imagePhotographerUrl?: string;
 }
 
 export interface ICoordinates {
@@ -62,13 +106,20 @@ export interface ICoordinates {
 
 export interface IItineraryDay {
   day: number;
+  dayNumber?: number;
   date: string;
-  theme: string;
-  activities: IActivity[];
+  theme?: string;
+  title?: string;
+  activities?: IActivity[];
+  morning?: IActivity[];
+  afternoon?: IActivity[];
+  evening?: IActivity[];
   hotel?: IHotel;
-  restaurants: IRestaurant[];
+  restaurants?: IRestaurant[];
   dailyBudget?: number;
   notes?: string;
+  practicalAdvice?: string;
+  weather?: IDayWeather;
 }
 
 export interface IBudgetBreakdown {
@@ -123,6 +174,7 @@ export interface IItinerary {
   version?: number;
   overview?: any;
   destination: string;
+  destinationMedia?: IDestinationMedia;
   totalDays: number;
   days: IItineraryDay[];
   hotels: IHotel[];

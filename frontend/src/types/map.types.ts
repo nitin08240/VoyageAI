@@ -20,6 +20,8 @@ export interface MapLocation {
   estimatedCost?: number | string;
   verificationStatus: VerificationStatus;
   externalUrl?: string;
+  imageUrl?: string;
+  thumbUrl?: string;
 }
 
 export type MapCategoryFilter = 'all' | 'destination' | 'attraction' | 'hotel' | 'restaurant' | 'activity';

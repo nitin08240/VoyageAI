@@ -117,6 +117,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         estimatedCost: hotel.priceRange,
         verificationStatus: hotel.verified ? 'verified' : coords ? 'geocoded' : 'unverified',
         externalUrl: hotel.bookingLink,
+        imageUrl: hotel.imageUrl,
+        thumbUrl: hotel.thumbUrl,
       });
     });
 
@@ -134,6 +136,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         estimatedDuration: '1-2 hrs',
         estimatedCost: restaurant.estimatedCost || restaurant.costEstimate,
         verificationStatus: restaurant.verified ? 'verified' : coords ? 'geocoded' : 'unverified',
+        imageUrl: restaurant.imageUrl,
+        thumbUrl: restaurant.thumbUrl,
       });
     });
 
@@ -158,6 +162,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
                 estimatedCost: act.cost,
                 verificationStatus: coords ? 'geocoded' : 'unverified',
                 externalUrl: act.mapLink,
+                imageUrl: act.imageUrl,
+                thumbUrl: act.thumbUrl,
               });
             });
           }
@@ -177,6 +183,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         coordinates: coords,
         estimatedDuration: act.duration || '2 hrs',
         verificationStatus: coords ? 'geocoded' : 'unverified',
+        imageUrl: act.imageUrl,
+        thumbUrl: act.thumbUrl,
       });
     });
 

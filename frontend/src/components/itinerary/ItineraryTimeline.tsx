@@ -3,15 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Calendar, Lightbulb, Sun, Sunset, Moon } from 'lucide-react';
 import { IItineraryDay } from '@/types/itinerary.types';
 import ActivityCard from './ActivityCard';
+import WeatherCard from '@/components/weather/WeatherCard';
+import DayAttractionGallery from './DayAttractionGallery';
 
 interface ItineraryTimelineProps {
   days: IItineraryDay[];
+  destinationCity?: string;
   selectedLocationId?: string | null;
   onLocationSelect?: (locationId: string, dayNum?: number) => void;
 }
 
 export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
   days,
+  destinationCity = 'Destination',
   selectedLocationId,
   onLocationSelect,
 }) => {
@@ -92,6 +96,20 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                   transition={{ duration: 0.3 }}
                   className="p-6 border-t border-white/10 space-y-6"
                 >
+                  {/* Top Day Attraction Gallery (Unsplash Images) */}
+                  <DayAttractionGallery
+                    activities={[...morningActs, ...afternoonActs, ...eveningActs]}
+                    dayNumber={dayNum}
+                    onSelectAttraction={(name) => onLocationSelect?.(name, dayNum)}
+                  />
+
+                  {/* OpenWeather Forecast for this Day */}
+                  <WeatherCard
+                    weather={day.weather}
+                    destinationCity={destinationCity}
+                    dayNumber={dayNum}
+                  />
+
                   {/* Practical Advice Banner */}
                   {(day.practicalAdvice || day.notes) && (
                     <div className="p-4 rounded-2xl bg-accent-500/10 border border-accent-500/20 flex items-start gap-3">

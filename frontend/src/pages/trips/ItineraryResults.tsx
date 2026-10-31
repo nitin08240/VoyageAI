@@ -314,6 +314,89 @@ export const ItineraryResults: React.FC = () => {
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
+              {/* Destination Hero Banner with Unsplash Photo */}
+              <div className="relative w-full h-80 sm:h-96 rounded-3xl overflow-hidden glass-card border border-white/10 shadow-2xl group">
+                <img
+                  src={
+                    itinerary.destinationMedia?.heroUrl ||
+                    'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1600&auto=format&fit=crop'
+                  }
+                  alt={`${destCity}, ${destCountry}`}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1600&auto=format&fit=crop';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-navy-950/80 via-transparent to-transparent" />
+
+                {/* Hero Bottom Content */}
+                <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-accent-500 text-white shadow-lg shadow-accent-500/30">
+                        Featured Destination
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-black/40 backdrop-blur-md text-slate-300 border border-white/10">
+                        {itinerary.days?.length || (trip as any).duration || 3} Days Itinerary
+                      </span>
+                    </div>
+                    <h2 className="text-3xl sm:text-5xl font-serif font-bold text-white tracking-tight drop-shadow-md">
+                      {destCity}
+                    </h2>
+                    <p className="text-sm sm:text-base text-slate-200 mt-1 drop-shadow">
+                      {destCountry} &bull; Handcrafted AI travel blueprint
+                    </p>
+                  </div>
+
+                  {/* Unsplash Attribution */}
+                  {itinerary.destinationMedia?.photographer && (
+                    <div className="text-[11px] text-white/80 bg-black/50 px-3 py-1.5 rounded-xl backdrop-blur-md border border-white/10">
+                      Photo by{' '}
+                      <a
+                        href={itinerary.destinationMedia.photographerUrl || 'https://unsplash.com?utm_source=voyageai&utm_medium=referral'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold underline hover:text-white"
+                      >
+                        {itinerary.destinationMedia.photographer}
+                      </a>{' '}
+                      on Unsplash
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Destination Photo Highlights Gallery */}
+              {itinerary.destinationMedia?.gallery && itinerary.destinationMedia.gallery.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-accent-400" /> Destination Highlights Gallery
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {itinerary.destinationMedia.gallery.map((photo, i) => (
+                      <div
+                        key={i}
+                        className="h-28 rounded-2xl overflow-hidden glass-card border border-white/10 relative group"
+                      >
+                        <img
+                          src={photo.thumbUrl || photo.url}
+                          alt={photo.alt || `${destCity} highlight`}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                          <span className="text-[9px] text-white/90 truncate">
+                            Photo by {photo.photographer}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="p-8 rounded-3xl glass-card border border-white/10">
                 <h3 className="text-xl font-serif font-bold text-white mb-3">
                   Destination Briefing & Essence
@@ -374,6 +457,7 @@ export const ItineraryResults: React.FC = () => {
             <div>
               <ItineraryTimeline
                 days={itinerary.days || []}
+                destinationCity={destCity}
                 selectedLocationId={selectedLocationId}
                 onLocationSelect={(id, dayNum) => {
                   setSelectedLocationId(id);

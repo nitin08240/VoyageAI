@@ -5,6 +5,20 @@ export interface IItineraryDocument extends Document {
   tripId: Types.ObjectId;
   version: number;
   overview: string;
+  destinationMedia?: {
+    heroUrl: string;
+    thumbUrl?: string;
+    photographer?: string;
+    photographerUrl?: string;
+    sourceUrl?: string;
+    gallery?: Array<{
+      url: string;
+      thumbUrl?: string;
+      alt?: string;
+      photographer?: string;
+      photographerUrl?: string;
+    }>;
+  };
   days: Array<{
     dayNumber: number;
     date: string;
@@ -13,6 +27,7 @@ export interface IItineraryDocument extends Document {
     afternoon: IActivitySubdoc[];
     evening: IActivitySubdoc[];
     practicalAdvice: string;
+    weather?: IDayWeather;
   }>;
   hotels: Array<{
     name: string;
@@ -24,6 +39,10 @@ export interface IItineraryDocument extends Document {
     bookingLink?: string;
     verified: boolean;
     coordinates?: { lat: number; lng: number };
+    imageUrl?: string;
+    thumbUrl?: string;
+    imagePhotographer?: string;
+    imagePhotographerUrl?: string;
   }>;
   restaurants: Array<{
     name: string;
@@ -33,6 +52,10 @@ export interface IItineraryDocument extends Document {
     location: string;
     verified: boolean;
     coordinates?: { lat: number; lng: number };
+    imageUrl?: string;
+    thumbUrl?: string;
+    imagePhotographer?: string;
+    imagePhotographerUrl?: string;
   }>;
   activities: IActivitySubdoc[];
   budgetBreakdown: {
@@ -65,6 +88,23 @@ export interface IItineraryDocument extends Document {
   updatedAt: Date;
 }
 
+export interface IDayWeather {
+  forecastAvailable: boolean;
+  date: string;
+  temperature?: number;
+  minTemperature?: number;
+  maxTemperature?: number;
+  condition?: string;
+  description?: string;
+  icon?: string;
+  humidity?: number;
+  windSpeed?: number;
+  rainProbability?: number;
+  recommendations?: string[];
+  message?: string;
+  lastUpdated?: Date;
+}
+
 interface IActivitySubdoc {
   time: string;
   name: string;
@@ -75,12 +115,56 @@ interface IActivitySubdoc {
   transportation?: string;
   mapLink?: string;
   coordinates?: { lat: number; lng: number };
+  imageUrl?: string;
+  thumbUrl?: string;
+  imagePhotographer?: string;
+  imagePhotographerUrl?: string;
 }
 
 const coordinatesSchema = new Schema(
   {
     lat: { type: Number },
     lng: { type: Number },
+  },
+  { _id: false }
+);
+
+const weatherSchema = new Schema(
+  {
+    forecastAvailable: { type: Boolean, default: false },
+    date: { type: String, required: true },
+    temperature: { type: Number },
+    minTemperature: { type: Number },
+    maxTemperature: { type: Number },
+    condition: { type: String },
+    description: { type: String },
+    icon: { type: String },
+    humidity: { type: Number },
+    windSpeed: { type: Number },
+    rainProbability: { type: Number },
+    recommendations: { type: [String], default: [] },
+    message: { type: String },
+    lastUpdated: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
+const destinationMediaSchema = new Schema(
+  {
+    heroUrl: { type: String, required: true },
+    thumbUrl: { type: String },
+    photographer: { type: String },
+    photographerUrl: { type: String },
+    sourceUrl: { type: String },
+    gallery: [
+      {
+        url: { type: String, required: true },
+        thumbUrl: { type: String },
+        alt: { type: String },
+        photographer: { type: String },
+        photographerUrl: { type: String },
+      },
+    ],
   },
   { _id: false }
 );
@@ -96,6 +180,10 @@ const activitySchema = new Schema<IActivitySubdoc>(
     transportation: { type: String, default: '' },
     mapLink: { type: String },
     coordinates: { type: coordinatesSchema },
+    imageUrl: { type: String },
+    thumbUrl: { type: String },
+    imagePhotographer: { type: String },
+    imagePhotographerUrl: { type: String },
   },
   { _id: false }
 );
@@ -109,6 +197,7 @@ const daySchema = new Schema(
     afternoon: { type: [activitySchema], default: [] },
     evening: { type: [activitySchema], default: [] },
     practicalAdvice: { type: String, default: '' },
+    weather: { type: weatherSchema },
   },
   { _id: false }
 );
@@ -124,6 +213,10 @@ const hotelSchema = new Schema(
     bookingLink: { type: String },
     verified: { type: Boolean, default: false },
     coordinates: { type: coordinatesSchema },
+    imageUrl: { type: String },
+    thumbUrl: { type: String },
+    imagePhotographer: { type: String },
+    imagePhotographerUrl: { type: String },
   },
   { _id: false }
 );
@@ -137,6 +230,10 @@ const restaurantSchema = new Schema(
     location: { type: String, required: true },
     verified: { type: Boolean, default: false },
     coordinates: { type: coordinatesSchema },
+    imageUrl: { type: String },
+    thumbUrl: { type: String },
+    imagePhotographer: { type: String },
+    imagePhotographerUrl: { type: String },
   },
   { _id: false }
 );
@@ -195,6 +292,9 @@ const itinerarySchema = new Schema<IItineraryDocument>(
     overview: {
       type: String,
       required: true,
+    },
+    destinationMedia: {
+      type: destinationMediaSchema,
     },
     days: {
       type: [daySchema],

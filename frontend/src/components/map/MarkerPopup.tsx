@@ -31,6 +31,21 @@ export const MarkerPopup: React.FC<MarkerPopupProps> = ({ location }) => {
 
   return (
     <div className="p-1 min-w-[220px] max-w-[280px] text-slate-100 font-sans">
+      {/* Attraction Photo if available */}
+      {(location.imageUrl || location.thumbUrl) && (
+        <div className="w-full h-28 rounded-lg overflow-hidden mb-2 bg-navy-950/60 relative">
+          <img
+            src={location.thumbUrl || location.imageUrl}
+            alt={location.name}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
       {/* Category & Day Badge */}
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getCategoryColor()}`}>
@@ -105,3 +120,4 @@ export const MarkerPopup: React.FC<MarkerPopupProps> = ({ location }) => {
     </div>
   );
 };
+

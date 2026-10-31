@@ -81,3 +81,4 @@ export async function fetchDayRoute(waypoints: RouteWaypoint[]): Promise<RouteDa
     return null;
   }
 }
+

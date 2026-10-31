@@ -5,6 +5,8 @@ import { Trip } from '../../models/Trip.model';
 import { NotFoundError, ForbiddenError } from '../../shared/errors';
 import { sendSuccess } from '../../shared/response';
 import { geocodingService } from '../../services/geocoding.service';
+import { unsplashService } from '../../services/unsplash.service';
+import { weatherService } from '../../services/weather.service';
 
 /**
  * GET /api/v1/itineraries/:tripId
@@ -34,7 +36,82 @@ export async function getItinerary(
       throw new NotFoundError('No itinerary found for this trip.');
     }
 
+    // Auto-enrich images and weather if missing or empty
+    const destName = trip.destination?.city || trip.destination?.name || 'Destination';
+    const coords = itinerary.hotels?.[0]?.coordinates || (itinerary.days?.[0] as any)?.morning?.[0]?.coordinates;
+
+    let needsSave = false;
+
+    if (!itinerary.destinationMedia?.heroUrl) {
+      try {
+        const imgModified = await unsplashService.enrichItineraryImages(itinerary, destName);
+        if (imgModified) needsSave = true;
+      } catch (err: any) {
+        console.warn('[Auto-Enrich Images]', err.message);
+      }
+    }
+
+    if (!itinerary.days?.[0]?.weather) {
+      try {
+        const weatherModified = await weatherService.enrichItineraryWeather(itinerary, destName, coords);
+        if (weatherModified) needsSave = true;
+      } catch (err: any) {
+        console.warn('[Auto-Enrich Weather]', err.message);
+      }
+    }
+
+    if (needsSave) {
+      itinerary.markModified('destinationMedia');
+      itinerary.markModified('days');
+      itinerary.markModified('hotels');
+      itinerary.markModified('restaurants');
+      await itinerary.save();
+    }
+
     sendSuccess(res, { itinerary, trip }, 'Itinerary retrieved');
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/v1/itineraries/:tripId/enrich-media
+ * Explicitly triggers Unsplash image fetching and OpenWeather updates for an itinerary.
+ */
+export async function enrichItineraryMedia(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const tripId = req.params.tripId as string;
+    const userId = authReq.user.id;
+
+    const trip = await Trip.findById(tripId);
+    if (!trip) throw new NotFoundError('Trip not found.');
+    if (trip.userId.toString() !== userId) {
+      throw new ForbiddenError('You do not have access to this trip.');
+    }
+
+    const itinerary = await Itinerary.findOne({ tripId, userId }).sort({ version: -1 });
+    if (!itinerary) {
+      throw new NotFoundError('No itinerary found for this trip.');
+    }
+
+    const destName = trip.destination?.city || trip.destination?.name || 'Destination';
+    const coords = itinerary.hotels?.[0]?.coordinates || (itinerary.days?.[0] as any)?.morning?.[0]?.coordinates;
+
+    await unsplashService.enrichItineraryImages(itinerary, destName);
+    await weatherService.enrichItineraryWeather(itinerary, destName, coords);
+
+    itinerary.markModified('destinationMedia');
+    itinerary.markModified('days');
+    itinerary.markModified('hotels');
+    itinerary.markModified('restaurants');
+    await itinerary.save();
+
+    sendSuccess(res, { itinerary, trip }, 'Itinerary media and weather refreshed successfully');
   } catch (error) {
     next(error);
   }
