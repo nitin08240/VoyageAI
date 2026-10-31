@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as authController from './auth.controller';
 import { validate } from '../../middleware/validate.middleware';
-import { authenticate } from '../../middleware/auth.middleware';
+import { authenticate, optionalAuthenticate } from '../../middleware/auth.middleware';
 import { authLimiter } from '../../middleware/rateLimit.middleware';
 import {
   registerSchema,
@@ -22,7 +22,7 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/logout', authenticate, authController.logout);
 
 // GET /api/v1/auth/me
-router.get('/me', authenticate, authController.me);
+router.get('/me', optionalAuthenticate, authController.me);
 
 // POST /api/v1/auth/forgot-password
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);

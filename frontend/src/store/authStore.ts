@@ -52,7 +52,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
         try {
           const user = await authService.getMe();
-          set({ user, isAuthenticated: true, isLoading: false });
+          set({ user: user || null, isAuthenticated: !!user, isLoading: false });
         } catch {
           set({ user: null, isAuthenticated: false, isLoading: false });
         }

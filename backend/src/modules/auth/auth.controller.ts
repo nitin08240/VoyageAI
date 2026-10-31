@@ -65,6 +65,10 @@ export async function me(
 ): Promise<void> {
   try {
     const authReq = req as AuthenticatedRequest;
+    if (!authReq.user?.id) {
+      sendSuccess(res, { user: null }, 'Not authenticated.');
+      return;
+    }
     const user = await authService.getMe(authReq.user.id);
     sendSuccess(res, { user }, 'Profile retrieved successfully.');
   } catch (err) {

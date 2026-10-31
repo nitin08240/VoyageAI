@@ -28,12 +28,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   error => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url || '';
+    const isAuthCheck = url.includes('/auth/me') || url.includes('/auth/login') || url.includes('/auth/register');
+
+    if (error.response?.status === 401 && !isAuthCheck) {
       // Clear any stored auth state
       localStorage.removeItem('voyage-auth');
+      localStorage.removeItem('voyage_token');
       sessionStorage.clear();
-      // Redirect to login if not already there
-      if (window.location.pathname !== '/login') {
+
+      // Redirect to login only if accessing a protected private route
+      const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/', '/explore'];
+      if (!publicPaths.includes(window.location.pathname) && !window.location.pathname.startsWith('/shared/')) {
         window.location.href = '/login';
       }
     }
