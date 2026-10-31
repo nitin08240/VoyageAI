@@ -18,9 +18,66 @@ export async function createTrip(
   userId: string,
   data: CreateTripInput
 ): Promise<ITripDocument> {
+  const destName = data.destination.name || data.destination.city || data.destination.country || 'Destination';
+  const destCountry = data.destination.country || 'Worldwide';
+  const destCity = data.destination.city || data.destination.name || '';
+  const startingLocation = data.startingLocation || (data.destination as any).startingLocation || 'Not specified';
+
+  const start = data.dates.start || (data.dates.departureDate ? new Date(data.dates.departureDate) : new Date());
+  const end = data.dates.end || (data.dates.returnDate ? new Date(data.dates.returnDate) : new Date(Date.now() + 7 * 86400000));
+  const duration = data.duration || Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+
+  let transportStr = data.preferences.transportation || 'mixed';
+  if (Array.isArray((data.preferences as any).transport)) {
+    transportStr = (data.preferences as any).transport.join(', ');
+  } else if (typeof (data.preferences as any).transport === 'string') {
+    transportStr = (data.preferences as any).transport;
+  }
+
+  let foodStr = 'local';
+  if (typeof data.preferences.food === 'string') {
+    foodStr = data.preferences.food;
+  } else if (data.preferences.food && typeof data.preferences.food === 'object') {
+    foodStr = `${(data.preferences.food as any).diet || 'no_preference'} ${(data.preferences.food as any).restrictions ? `(${(data.preferences.food as any).restrictions})` : ''}`.trim();
+  }
+
+  let addlStr = data.preferences.additionalRequirements || '';
+  if (!addlStr && (data.preferences as any).additional && typeof (data.preferences as any).additional === 'object') {
+    addlStr = (data.preferences as any).additional.specialRequests || '';
+  }
+
   const trip = await Trip.create({
-    ...data,
     userId,
+    destination: {
+      name: destName,
+      country: destCountry,
+      city: destCity,
+      region: data.destination.region || '',
+    },
+    startingLocation,
+    dates: {
+      start,
+      end,
+    },
+    duration,
+    travellers: {
+      adults: data.travellers.adults || 1,
+      children: data.travellers.children || 0,
+      infants: data.travellers.infants || 0,
+    },
+    budget: {
+      total: data.budget.total ?? (data.budget as any).amount ?? 2000,
+      currency: (data.budget.currency || 'USD').toUpperCase(),
+      perPerson: data.budget.perPerson ?? (data.budget as any).isPerPerson ?? false,
+    },
+    preferences: {
+      interests: data.preferences.interests || ['culture'],
+      accommodation: data.preferences.accommodation || 'mid-range-hotel',
+      transportation: transportStr,
+      food: foodStr,
+      additionalRequirements: addlStr,
+    },
+    status: data.status || 'draft',
   });
   return trip;
 }
