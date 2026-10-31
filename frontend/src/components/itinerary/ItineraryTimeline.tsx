@@ -6,9 +6,15 @@ import ActivityCard from './ActivityCard';
 
 interface ItineraryTimelineProps {
   days: IItineraryDay[];
+  selectedLocationId?: string | null;
+  onLocationSelect?: (locationId: string, dayNum?: number) => void;
 }
 
-export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ days }) => {
+export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
+  days,
+  selectedLocationId,
+  onLocationSelect,
+}) => {
   const [expandedDay, setExpandedDay] = useState<number>(1);
 
   const toggleDay = (dayNum: number) => {
@@ -104,9 +110,17 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ days }) =>
                         <Sun className="w-4 h-4" /> Morning Schedule
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {morningActs.map((act: any, i: number) => (
-                          <ActivityCard key={i} activity={act} />
-                        ))}
+                        {morningActs.map((act: any, i: number) => {
+                          const actId = `day-${dayNum}-morning-${i}`;
+                          return (
+                            <ActivityCard
+                              key={i}
+                              activity={act}
+                              isSelected={selectedLocationId === actId || selectedLocationId === act.name}
+                              onSelect={() => onLocationSelect?.(actId, dayNum)}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -118,9 +132,17 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ days }) =>
                         <Sunset className="w-4 h-4" /> Afternoon Schedule
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {afternoonActs.map((act: any, i: number) => (
-                          <ActivityCard key={i} activity={act} />
-                        ))}
+                        {afternoonActs.map((act: any, i: number) => {
+                          const actId = `day-${dayNum}-afternoon-${i}`;
+                          return (
+                            <ActivityCard
+                              key={i}
+                              activity={act}
+                              isSelected={selectedLocationId === actId || selectedLocationId === act.name}
+                              onSelect={() => onLocationSelect?.(actId, dayNum)}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -132,9 +154,17 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ days }) =>
                         <Moon className="w-4 h-4" /> Evening & Dining
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {eveningActs.map((act: any, i: number) => (
-                          <ActivityCard key={i} activity={act} />
-                        ))}
+                        {eveningActs.map((act: any, i: number) => {
+                          const actId = `day-${dayNum}-evening-${i}`;
+                          return (
+                            <ActivityCard
+                              key={i}
+                              activity={act}
+                              isSelected={selectedLocationId === actId || selectedLocationId === act.name}
+                              onSelect={() => onLocationSelect?.(actId, dayNum)}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   )}

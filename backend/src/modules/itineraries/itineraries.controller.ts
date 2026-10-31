@@ -4,6 +4,7 @@ import { Itinerary } from '../../models/Itinerary.model';
 import { Trip } from '../../models/Trip.model';
 import { NotFoundError, ForbiddenError } from '../../shared/errors';
 import { sendSuccess } from '../../shared/response';
+import { geocodingService } from '../../services/geocoding.service';
 
 /**
  * GET /api/v1/itineraries/:tripId
@@ -34,6 +35,47 @@ export async function getItinerary(
     }
 
     sendSuccess(res, { itinerary, trip }, 'Itinerary retrieved');
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/v1/itineraries/:tripId/geocode
+ * Batch-geocode missing coordinates for all locations in an itinerary.
+ */
+export async function geocodeItinerary(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const tripId = req.params.tripId as string;
+    const userId = authReq.user.id;
+
+    const trip = await Trip.findById(tripId);
+    if (!trip) throw new NotFoundError('Trip not found.');
+    if (trip.userId.toString() !== userId) {
+      throw new ForbiddenError('You do not have access to this trip.');
+    }
+
+    const itinerary = await Itinerary.findOne({ tripId, userId }).sort({ version: -1 });
+    if (!itinerary) {
+      throw new NotFoundError('No itinerary found to geocode.');
+    }
+
+    const destContext = trip.destination?.city || trip.destination?.name || 'City';
+    const modified = await geocodingService.geocodeItinerary(itinerary, destContext);
+
+    if (modified) {
+      itinerary.markModified('hotels');
+      itinerary.markModified('restaurants');
+      itinerary.markModified('days');
+      await itinerary.save();
+    }
+
+    sendSuccess(res, { itinerary, modified }, 'Geocoding completed successfully');
   } catch (error) {
     next(error);
   }

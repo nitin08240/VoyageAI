@@ -264,6 +264,16 @@ body {
   background: rgba(10,15,30,0.95);
 }
 
+.leaflet-popup-close-button {
+  color: #94a3b8 !important;
+  top: 8px !important;
+  right: 8px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+}
+
 .leaflet-control-zoom a {
   background: rgba(10,15,30,0.9) !important;
   color: #f8f6f0 !important;

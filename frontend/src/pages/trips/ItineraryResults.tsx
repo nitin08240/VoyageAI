@@ -63,6 +63,8 @@ export const ItineraryResults: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const printableRef = useRef<HTMLDivElement>(null);
 
@@ -370,7 +372,15 @@ export const ItineraryResults: React.FC = () => {
           {/* TAB 2: DAILY ITINERARY */}
           {activeTab === 'daily' && (
             <div>
-              <ItineraryTimeline days={itinerary.days || []} />
+              <ItineraryTimeline
+                days={itinerary.days || []}
+                selectedLocationId={selectedLocationId}
+                onLocationSelect={(id, dayNum) => {
+                  setSelectedLocationId(id);
+                  if (dayNum) setSelectedDay(dayNum);
+                  setActiveTab('map');
+                }}
+              />
             </div>
           )}
 
@@ -449,19 +459,23 @@ export const ItineraryResults: React.FC = () => {
 
           {/* TAB 7: MAP */}
           {activeTab === 'map' && (
-            <div>
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-2xl font-serif font-bold text-white">Interactive Journey Map</h3>
+                  <p className="text-slate-400 text-xs">
+                    Explore daily routes, verified accommodations, culinary hotspots, and attractions across {destCity}.
+                  </p>
+                </div>
+              </div>
+
               <TravelMap
-                destination={`${destCity}, ${destCountry}`}
-                hotels={itinerary.hotels || []}
-                restaurants={itinerary.restaurants || []}
-                activities={
-                  itinerary.days?.flatMap((d: any) => [
-                    ...(d.morning || []),
-                    ...(d.afternoon || []),
-                    ...(d.evening || []),
-                    ...(d.activities || []),
-                  ]) || []
-                }
+                itinerary={itinerary}
+                destinationName={`${destCity}, ${destCountry}`}
+                selectedDay={selectedDay}
+                selectedLocationId={selectedLocationId}
+                onLocationSelect={(id) => setSelectedLocationId(id)}
+                height="620px"
               />
             </div>
           )}

@@ -10,6 +10,7 @@ import { GenerationJob } from '../../models/GenerationJob.model';
 import { AIServiceError } from '../../shared/errors';
 import { validateBudgetConsistency, recalculateTotals } from '../../utils/budget';
 import { buildCuratedFallbackItinerary } from './ai.fallback';
+import { geocodingService } from '../../services/geocoding.service';
 
 const genAI = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
@@ -168,6 +169,17 @@ export async function generateItinerary(
     job.completedAt = new Date();
     (job as any).itineraryId = itinerary._id;
     await job.save();
+
+    // Asynchronously resolve missing coordinates via OSM Nominatim
+    const destContext = trip.destination?.city || trip.destination?.name || '';
+    geocodingService.geocodeItinerary(itinerary, destContext).then(async (modified) => {
+      if (modified) {
+        itinerary.markModified('hotels');
+        itinerary.markModified('restaurants');
+        itinerary.markModified('days');
+        await itinerary.save();
+      }
+    }).catch(err => console.warn('[Background Geocode]', err.message));
 
     return itinerary;
   } catch (error: any) {

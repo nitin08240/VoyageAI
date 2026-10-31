@@ -210,9 +210,44 @@ All endpoints are prefixed with `/api/v1`.
 |---|---|---|---|
 | `POST` | `/ai/generate` | Dispatch async Gemini itinerary generation job | Yes |
 | `GET` | `/ai/status/:jobId` | Poll status of generation job (`pending`, `completed`) | Yes |
-| `GET` | `/itineraries/trip/:tripId` | Fetch latest generated itinerary for a trip | Yes |
-| `POST` | `/itineraries/:id/share` | Generate public share token | Yes |
-| `GET` | `/itineraries/shared/:token` | View public shared itinerary | No |
+| `GET` | `/itineraries/:tripId` | Fetch latest generated itinerary for a trip | Yes |
+| `POST` | `/itineraries/:tripId/geocode` | Batch geocode missing coordinates via Nominatim | Yes |
+| `POST` | `/itineraries/:id/export` | Prepare formatted export data | Yes |
+| `GET` | `/shared/:token` | View public shared itinerary | No |
+
+---
+
+## 🗺️ Geospatial & Interactive Mapping Architecture
+
+VoyageAI features a high-performance, keyless OpenStreetMap (OSM) and React Leaflet interactive map that visualizes the traveler's entire journey with category filtering, daily route polylines, and live synchronization.
+
+### 1. Technology & Standards
+* **Map Tiles**: Standard public OpenStreetMap tile provider (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`).
+* **Attribution**: Full compliance with OpenStreetMap attribution guidelines.
+* **No API Keys**: Standard OSM tiles operate without proprietary API keys.
+* **Coordinate Conventions**:
+  * Leaflet: `[latitude, longitude]`
+  * MongoDB Documents: `{ lat: number, lng: number }`
+  * GeoJSON & OSRM requests: `[longitude, latitude]`
+
+### 2. Backend Geocoding Engine (Nominatim)
+* **Service**: `backend/src/services/geocoding.service.ts`
+* **Compliance**: Strictly adheres to OSM Nominatim acceptable use policy (minimum 1.1s throttle between requests, custom identifying User-Agent).
+* **Caching**: In-memory 7-day TTL cache for resolved queries to eliminate redundant requests.
+* **Validation**: Numerical bounds checks ensuring `lat ∈ [-90, 90]` and `lng ∈ [-180, 180]`.
+* **Automatic Pipeline**: Automatically triggers background geocoding upon itinerary generation, plus on-demand batch geocoding via `POST /api/v1/itineraries/:tripId/geocode`.
+
+### 3. Road Route Visualization (OSRM)
+* **Service**: `frontend/src/services/routing.service.ts`
+* **Engine**: Project-OSRM driving service (`router.project-osrm.org`).
+* **Honest Fallback**: Only real road routes returned by OSRM are rendered with duration and distance metrics; straight lines are never misrepresented as driving routes.
+
+### 4. Interactive Frontend Map Components
+* **`TravelMap.tsx`**: Core map container supporting bounds auto-fitting, selected location centering, and responsive heights.
+* **`MapControls.tsx`**: Interactive toolbar providing category filtering (Hotels, Dining, Attractions, Activities), day-wise selector (All Days, Day 1..N), route toggle, and auto-fit.
+* **`MarkerPopup.tsx`**: Dark glassmorphic venue cards showing category badge, schedule time, estimated duration, cost, OSM verification status, and one-click "Open in OSM" links.
+* **`DayRoute.tsx`**: Dynamic Leaflet Polyline overlay with dual-layer neon glow and road distance/time telemetry.
+* **Timeline Synchronization**: Clicking any activity card in the Daily Plan timeline highlights the corresponding venue pin and centers the map.
 
 ---
 

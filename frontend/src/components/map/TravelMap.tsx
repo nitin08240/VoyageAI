@@ -1,185 +1,349 @@
-import React, { useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { MapPin, Navigation } from 'lucide-react';
-import { ICoordinates, IHotel, IRestaurant, IActivity } from '@/types/itinerary.types';
+import { MapPin, Navigation, RefreshCw } from 'lucide-react';
+import { MapLocation, MapCategoryFilter, TravelMapProps } from '@/types/map.types';
+import { MapControls } from './MapControls';
+import { MapLegend } from './MapLegend';
+import { MarkerPopup } from './MarkerPopup';
+import { DayRoute } from './DayRoute';
+import { apiPost } from '@/services/api';
 
-// Custom Map Marker Icons using Leaflet divIcon to ensure no broken asset URLs
-const createPinIcon = (color: string, label: string) => {
+// Create custom colored markers with Leaflet divIcon
+const createCustomMarkerIcon = (
+  category: MapLocation['category'],
+  label: string,
+  isSelected: boolean = false
+) => {
+  let bgColor = '#3b82f6'; // blue for hotels
+  if (category === 'restaurant') bgColor = '#f43f5e'; // rose
+  if (category === 'attraction') bgColor = '#f59e0b'; // amber
+  if (category === 'activity') bgColor = '#10b981'; // emerald
+  if (category === 'destination') bgColor = '#6366f1'; // indigo
+
+  const size = isSelected ? 36 : 28;
+  const pulseClass = isSelected ? 'ring-4 ring-accent-400 ring-offset-2 ring-offset-navy-950 scale-110' : '';
+
   return L.divIcon({
-    className: 'custom-map-pin',
+    className: 'voyage-custom-pin',
     html: `
-      <div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid white;">
-        <span style="transform: rotate(45deg); color: white; font-size: 11px; font-weight: bold;">${label}</span>
+      <div style="background-color: ${bgColor}; width: ${size}px; height: ${size}px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.6); border: 2.5px solid white;" class="transition-transform duration-200 ${pulseClass}">
+        <span style="transform: rotate(45deg); color: white; font-size: ${isSelected ? '12px' : '10px'}; font-weight: 800; font-family: sans-serif;">${label}</span>
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -28],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size],
   });
 };
 
-const hotelIcon = createPinIcon('#3b82f6', 'H'); // Blue
-const restaurantIcon = createPinIcon('#ef4444', 'R'); // Red
-const activityIcon = createPinIcon('#f97316', 'A'); // Orange
-
-interface MapItem {
-  id: string;
-  type: 'hotel' | 'restaurant' | 'activity';
-  title: string;
-  subtitle: string;
-  coordinates: ICoordinates;
-}
-
-interface TravelMapProps {
-  destination?: string;
-  hotels?: IHotel[];
-  restaurants?: IRestaurant[];
-  activities?: IActivity[];
-  defaultCenter?: [number, number];
-}
-
-// Auto-bounds fitter component
-function AutoFitBounds({ markers }: { markers: MapItem[] }) {
+// Map controller for auto-fitting bounds and panning to selected location
+function MapBoundsController({
+  locations,
+  selectedLocation,
+  triggerFit,
+}: {
+  locations: MapLocation[];
+  selectedLocation?: MapLocation | null;
+  triggerFit: number;
+}) {
   const map = useMap();
 
+  // Fit bounds when markers change or "Fit All" is clicked
   useEffect(() => {
-    if (markers.length === 0) return;
-    const bounds = L.latLngBounds(markers.map((m) => [m.coordinates.lat, m.coordinates.lng]));
-    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
-  }, [markers, map]);
+    const validCoords = locations
+      .filter((loc) => loc.coordinates)
+      .map((loc) => [loc.coordinates!.lat, loc.coordinates!.lng] as [number, number]);
+
+    if (validCoords.length > 0) {
+      const bounds = L.latLngBounds(validCoords);
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+  }, [locations, triggerFit, map]);
+
+  // Center on selected location if available
+  useEffect(() => {
+    if (selectedLocation?.coordinates) {
+      map.setView([selectedLocation.coordinates.lat, selectedLocation.coordinates.lng], 15, {
+        animate: true,
+      });
+    }
+  }, [selectedLocation, map]);
 
   return null;
 }
 
 export const TravelMap: React.FC<TravelMapProps> = ({
-  destination = 'Destination',
-  hotels = [],
-  restaurants = [],
-  activities = [],
-  defaultCenter = [35.0116, 135.7681], // Kyoto default
+  itinerary,
+  destination,
+  destinationName,
+  hotels: propHotels,
+  restaurants: propRestaurants,
+  activities: propActivities,
+  selectedDay: propSelectedDay = null,
+  selectedLocationId = null,
+  onLocationSelect,
+  height = '560px',
 }) => {
-  // Extract all points with coordinates
-  const markers: MapItem[] = [];
+  const [selectedCategory, setSelectedCategory] = useState<MapCategoryFilter>('all');
+  const [selectedDay, setSelectedDay] = useState<number | null>(propSelectedDay);
+  const [showRoutes, setShowRoutes] = useState<boolean>(true);
+  const [fitTrigger, setFitTrigger] = useState<number>(0);
+  const [isGeocoding, setIsGeocoding] = useState<boolean>(false);
 
-  hotels.forEach((h, i) => {
-    if (h.coordinates) {
-      markers.push({
-        id: `h-${i}`,
-        type: 'hotel',
-        title: h.name,
-        subtitle: `${h.category} Hotel • ${h.priceRange}`,
-        coordinates: h.coordinates,
+  // Sync prop changes
+  useEffect(() => {
+    if (propSelectedDay !== undefined) {
+      setSelectedDay(propSelectedDay);
+    }
+  }, [propSelectedDay]);
+
+  // Extract and normalize all locations from the itinerary data structure
+  const allLocations: MapLocation[] = useMemo(() => {
+    const list: MapLocation[] = [];
+
+    // Fallback or explicit hotels
+    const hotelsList = itinerary?.hotels || propHotels || [];
+    hotelsList.forEach((hotel: any, index: number) => {
+      const coords = hotel.coordinates?.lat && hotel.coordinates?.lng ? hotel.coordinates : undefined;
+      list.push({
+        locationId: `hotel-${index}`,
+        name: hotel.name,
+        category: 'hotel',
+        description: hotel.whyRecommended || hotel.category,
+        coordinates: coords,
+        address: hotel.location,
+        estimatedDuration: 'Stay',
+        estimatedCost: hotel.priceRange,
+        verificationStatus: hotel.verified ? 'verified' : coords ? 'geocoded' : 'unverified',
+        externalUrl: hotel.bookingLink,
+      });
+    });
+
+    // Fallback or explicit restaurants
+    const restList = itinerary?.restaurants || propRestaurants || [];
+    restList.forEach((restaurant: any, index: number) => {
+      const coords = restaurant.coordinates?.lat && restaurant.coordinates?.lng ? restaurant.coordinates : undefined;
+      list.push({
+        locationId: `restaurant-${index}`,
+        name: restaurant.name,
+        category: 'restaurant',
+        description: restaurant.cuisine ? `${restaurant.cuisine} cuisine` : '',
+        coordinates: coords,
+        address: restaurant.location,
+        estimatedDuration: '1-2 hrs',
+        estimatedCost: restaurant.estimatedCost || restaurant.costEstimate,
+        verificationStatus: restaurant.verified ? 'verified' : coords ? 'geocoded' : 'unverified',
+      });
+    });
+
+    // Daily Sightseeing & Activities from itinerary
+    if (Array.isArray(itinerary?.days)) {
+      itinerary.days.forEach((day: any) => {
+        const slots = ['morning', 'afternoon', 'evening'] as const;
+
+        slots.forEach((key) => {
+          if (Array.isArray(day[key])) {
+            day[key].forEach((act: any, actIdx: number) => {
+              const coords = act.coordinates?.lat && act.coordinates?.lng ? act.coordinates : undefined;
+              list.push({
+                locationId: `day-${day.dayNumber}-${key}-${actIdx}`,
+                name: act.name,
+                category: 'attraction',
+                description: act.description,
+                coordinates: coords,
+                dayNumber: day.dayNumber,
+                timeSlot: key,
+                estimatedDuration: act.duration,
+                estimatedCost: act.cost,
+                verificationStatus: coords ? 'geocoded' : 'unverified',
+                externalUrl: act.mapLink,
+              });
+            });
+          }
+        });
       });
     }
-  });
 
-  restaurants.forEach((r, i) => {
-    if (r.coordinates) {
-      markers.push({
-        id: `r-${i}`,
-        type: 'restaurant',
-        title: r.name,
-        subtitle: `${r.cuisine} • ${(r as any).estimatedCost || (r as any).costEstimate || '$20'}`,
-        coordinates: r.coordinates,
+    // Standalone Activities
+    const actList = itinerary?.activities || propActivities || [];
+    actList.forEach((act: any, actIdx: number) => {
+      const coords = act.coordinates?.lat && act.coordinates?.lng ? act.coordinates : undefined;
+      list.push({
+        locationId: `act-${actIdx}`,
+        name: typeof act === 'string' ? act : act.name,
+        category: 'activity',
+        description: typeof act === 'string' ? act : act.description,
+        coordinates: coords,
+        estimatedDuration: act.duration || '2 hrs',
+        verificationStatus: coords ? 'geocoded' : 'unverified',
       });
-    }
-  });
+    });
 
-  activities.forEach((a, i) => {
-    if (a.coordinates) {
-      markers.push({
-        id: `a-${i}`,
-        type: 'activity',
-        title: a.name,
-        subtitle: a.duration,
-        coordinates: a.coordinates,
-      });
-    }
-  });
+    return list;
+  }, [itinerary, propHotels, propRestaurants, propActivities]);
 
-  // If no markers have exact lat/lng, show fallback message with search links
-  if (markers.length === 0) {
+  // Filter locations by Category & Selected Day
+  const filteredLocations = useMemo(() => {
+    return allLocations.filter((loc) => {
+      // Category filter
+      if (selectedCategory !== 'all' && loc.category !== selectedCategory) {
+        return false;
+      }
+      // Day filter (only applies to activities with dayNumber; keep hotels/restaurants visible unless filtered)
+      if (selectedDay !== null && loc.dayNumber !== undefined) {
+        if (loc.dayNumber !== selectedDay) return false;
+      }
+      return true;
+    });
+  }, [allLocations, selectedCategory, selectedDay]);
+
+  const locationsWithCoords = useMemo(() => {
+    return filteredLocations.filter((loc) => loc.coordinates);
+  }, [filteredLocations]);
+
+  const selectedLocation = useMemo(() => {
+    if (!selectedLocationId) return null;
+    return allLocations.find((loc) => loc.locationId === selectedLocationId || loc.name === selectedLocationId);
+  }, [allLocations, selectedLocationId]);
+
+  const totalDays = itinerary?.days?.length || 0;
+  const destTitle = destinationName || destination || itinerary?.overview?.destination || itinerary?.destination || 'Your Destination';
+
+  // Request backend to batch geocode missing locations if needed
+  const handleBatchGeocode = async () => {
+    const tripId = itinerary?.tripId || itinerary?._id;
+    if (!tripId) return;
+
+    setIsGeocoding(true);
+    try {
+      await apiPost(`/itineraries/${tripId}/geocode`);
+      // Reload window or notify to refresh state
+      window.location.reload();
+    } catch (err) {
+      console.error('Geocoding request failed:', err);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  // If absolutely no locations have coordinates yet
+  if (locationsWithCoords.length === 0) {
     return (
       <div className="w-full h-96 rounded-3xl glass-card border border-white/10 p-8 flex flex-col items-center justify-center text-center">
         <div className="w-16 h-16 rounded-full bg-accent-500/10 border border-accent-500/20 text-accent-400 flex items-center justify-center mb-4">
           <MapPin className="w-8 h-8" />
         </div>
-        <h4 className="text-xl font-serif font-bold text-white mb-2">
-          Interactive Map for {destination}
-        </h4>
+        <h4 className="text-xl font-serif font-bold text-white mb-2">Interactive Map for {destTitle}</h4>
         <p className="text-xs text-slate-400 max-w-md mb-6 leading-relaxed">
-          Geo-coordinates are dynamically mapped from verified venues. You can explore all recommended attractions and hotspots directly on OpenStreetMap or Google Maps below.
+          Coordinates are currently being mapped via OpenStreetMap Nominatim. You can trigger an instant geocoding pass or open the destination directly.
         </p>
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-6 py-3 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-semibold text-xs transition-colors flex items-center gap-2 shadow-lg shadow-accent-500/20"
-        >
-          <Navigation className="w-4 h-4" /> Open {destination} in Maps
-        </a>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBatchGeocode}
+            disabled={isGeocoding}
+            className="px-5 py-2.5 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-semibold text-xs transition-colors flex items-center gap-2 shadow-lg shadow-accent-500/20 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isGeocoding ? 'animate-spin' : ''}`} />
+            {isGeocoding ? 'Resolving Coordinates...' : 'Resolve Geocodes Now'}
+          </button>
+          <a
+            href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(destTitle)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs transition-colors flex items-center gap-2 border border-white/10"
+          >
+            <Navigation className="w-4 h-4" /> Open in OSM
+          </a>
+        </div>
       </div>
     );
   }
 
-  const centerPos = markers[0]?.coordinates
-    ? [markers[0].coordinates.lat, markers[0].coordinates.lng]
-    : defaultCenter;
+  const defaultCenter: [number, number] = [
+    locationsWithCoords[0].coordinates!.lat,
+    locationsWithCoords[0].coordinates!.lng,
+  ];
 
   return (
-    <div className="w-full h-[520px] rounded-3xl overflow-hidden glass-card border border-white/10 shadow-2xl relative">
-      <MapContainer
-        center={centerPos as [number, number]}
-        zoom={12}
-        scrollWheelZoom={false}
-        className="w-full h-full"
+    <div className="w-full flex flex-col gap-4">
+      {/* Map Control Toolbar */}
+      <MapControls
+        totalDays={totalDays}
+        selectedDay={selectedDay}
+        onSelectDay={(day) => setSelectedDay(day)}
+        selectedCategory={selectedCategory}
+        onSelectCategory={(cat) => setSelectedCategory(cat)}
+        showRoutes={showRoutes}
+        onToggleRoutes={() => setShowRoutes(!showRoutes)}
+        onFitBounds={() => setFitTrigger((prev) => prev + 1)}
+      />
+
+      {/* Main Interactive Map Frame */}
+      <div
+        className="w-full rounded-3xl overflow-hidden glass-card border border-white/10 shadow-2xl relative"
+        style={{ height }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <AutoFitBounds markers={markers} />
+        <MapContainer
+          center={defaultCenter}
+          zoom={13}
+          scrollWheelZoom={false}
+          className="w-full h-full"
+        >
+          {/* OpenStreetMap Standard Tile Layer */}
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
 
-        {markers.map((item) => {
-          const icon =
-            item.type === 'hotel'
-              ? hotelIcon
-              : item.type === 'restaurant'
-              ? restaurantIcon
-              : activityIcon;
+          {/* Bounds & Center Controller */}
+          <MapBoundsController
+            locations={locationsWithCoords}
+            selectedLocation={selectedLocation}
+            triggerFit={fitTrigger}
+          />
 
-          return (
-            <Marker
-              key={item.id}
-              position={[item.coordinates.lat, item.coordinates.lng]}
-              icon={icon}
-            >
-              <Popup className="custom-leaflet-popup">
-                <div className="p-1">
-                  <div className="text-[10px] uppercase tracking-wider text-accent-600 font-bold mb-0.5">
-                    {item.type}
-                  </div>
-                  <div className="text-xs font-bold text-slate-900">{item.title}</div>
-                  <div className="text-[11px] text-slate-600 mt-0.5">{item.subtitle}</div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+          {/* OSRM Daily Road Route Polyline Layer */}
+          <DayRoute
+            locations={allLocations}
+            selectedDay={selectedDay}
+            enabled={showRoutes && selectedDay !== null}
+          />
 
-      {/* Floating Legend */}
-      <div className="absolute bottom-4 left-4 z-[1000] bg-navy-950/90 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-4 text-xs font-medium text-white">
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-blue-500 inline-block" /> Hotels
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Restaurants
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-orange-500 inline-block" /> Attractions
+          {/* Render Location Markers */}
+          {locationsWithCoords.map((item) => {
+            const isSelected = selectedLocation?.locationId === item.locationId;
+            let label = 'A';
+            if (item.category === 'hotel') label = 'H';
+            if (item.category === 'restaurant') label = 'R';
+            if (item.category === 'destination') label = '★';
+
+            const icon = createCustomMarkerIcon(item.category, label, isSelected);
+
+            return (
+              <Marker
+                key={item.locationId}
+                position={[item.coordinates!.lat, item.coordinates!.lng]}
+                icon={icon}
+                eventHandlers={{
+                  click: () => {
+                    onLocationSelect?.(item.locationId);
+                  },
+                }}
+              >
+                <Popup className="voyage-leaflet-popup">
+                  <MarkerPopup location={item} />
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+
+        {/* Floating Category Legend */}
+        <div className="absolute bottom-4 left-4 z-[1000] pointer-events-auto">
+          <MapLegend />
         </div>
       </div>
     </div>
@@ -187,4 +351,3 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 };
 
 export default TravelMap;
-

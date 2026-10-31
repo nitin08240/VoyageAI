@@ -4,21 +4,36 @@ import { IActivity } from '@/types/itinerary.types';
 
 interface ActivityCardProps {
   activity: IActivity;
+  isSelected?: boolean;
+  onSelect?: () => void;
   onToggleComplete?: () => void;
 }
 
-export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onToggleComplete }) => {
+export const ActivityCard: React.FC<ActivityCardProps> = ({
+  activity,
+  isSelected = false,
+  onSelect,
+  onToggleComplete,
+}) => {
   const [completed, setCompleted] = useState(activity.completed || false);
 
-  const handleToggle = () => {
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCompleted(!completed);
     onToggleComplete?.();
   };
 
+  const osmUrl = activity.coordinates
+    ? `https://www.openstreetmap.org/?mlat=${activity.coordinates.lat}&mlon=${activity.coordinates.lng}#map=16/${activity.coordinates.lat}/${activity.coordinates.lng}`
+    : `https://www.openstreetmap.org/search?query=${encodeURIComponent(activity.name || activity.location || '')}`;
+
   return (
     <div
-      className={`p-5 rounded-2xl border transition-all ${
-        completed
+      onClick={onSelect}
+      className={`p-5 rounded-2xl border transition-all cursor-pointer ${
+        isSelected
+          ? 'bg-accent-500/10 border-accent-400 ring-2 ring-accent-400/50 shadow-lg shadow-accent-500/10'
+          : completed
           ? 'bg-navy-950/40 border-white/5 opacity-60'
           : 'glass-card border-white/10 hover:border-white/20'
       }`}
@@ -72,17 +87,15 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onToggleCo
 
         {(activity.coordinates || activity.location) && (
           <a
-            href={
-              activity.coordinates
-                ? `https://www.google.com/maps/search/?api=1&query=${activity.coordinates.lat},${activity.coordinates.lng}`
-                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location || '')}`
-            }
+            href={osmUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-accent-400 hover:underline ml-auto"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-accent-400 hover:text-accent-300 hover:underline ml-auto"
+            title="Open in OpenStreetMap"
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>Map Pin</span>
+            <span>OSM Pin</span>
           </a>
         )}
       </div>
