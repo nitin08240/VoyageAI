@@ -5,6 +5,7 @@ export interface IItineraryDocument extends Document {
   tripId: Types.ObjectId;
   version: number;
   overview: string;
+  destinationCoordinates?: { lat: number; lng: number };
   destinationMedia?: {
     heroUrl: string;
     thumbUrl?: string;
@@ -58,6 +59,16 @@ export interface IItineraryDocument extends Document {
     imagePhotographerUrl?: string;
   }>;
   activities: IActivitySubdoc[];
+  nearbyDiscoveredPlaces?: Array<{
+    placeId: string;
+    name: string;
+    category: string;
+    lat: number;
+    lng: number;
+    distanceKm: number;
+    estimatedTravelMinutes: number;
+    hub: string;
+  }>;
   budgetBreakdown: {
     accommodation: number;
     food: number;
@@ -119,6 +130,9 @@ interface IActivitySubdoc {
   thumbUrl?: string;
   imagePhotographer?: string;
   imagePhotographerUrl?: string;
+  photoId?: string;
+  placeId?: string;
+  distanceKm?: number;
 }
 
 const coordinatesSchema = new Schema(
@@ -184,6 +198,9 @@ const activitySchema = new Schema<IActivitySubdoc>(
     thumbUrl: { type: String },
     imagePhotographer: { type: String },
     imagePhotographerUrl: { type: String },
+    photoId: { type: String },
+    placeId: { type: String },
+    distanceKm: { type: Number },
   },
   { _id: false }
 );
@@ -217,6 +234,9 @@ const hotelSchema = new Schema(
     thumbUrl: { type: String },
     imagePhotographer: { type: String },
     imagePhotographerUrl: { type: String },
+    photoId: { type: String },
+    placeId: { type: String },
+    distanceKm: { type: Number },
   },
   { _id: false }
 );
@@ -234,6 +254,9 @@ const restaurantSchema = new Schema(
     thumbUrl: { type: String },
     imagePhotographer: { type: String },
     imagePhotographerUrl: { type: String },
+    photoId: { type: String },
+    placeId: { type: String },
+    distanceKm: { type: Number },
   },
   { _id: false }
 );
@@ -293,6 +316,9 @@ const itinerarySchema = new Schema<IItineraryDocument>(
       type: String,
       required: true,
     },
+    destinationCoordinates: {
+      type: coordinatesSchema,
+    },
     destinationMedia: {
       type: destinationMediaSchema,
     },
@@ -310,6 +336,21 @@ const itinerarySchema = new Schema<IItineraryDocument>(
     },
     activities: {
       type: [activitySchema],
+      default: [],
+    },
+    nearbyDiscoveredPlaces: {
+      type: [
+        {
+          placeId: String,
+          name: String,
+          category: String,
+          lat: Number,
+          lng: Number,
+          distanceKm: Number,
+          estimatedTravelMinutes: Number,
+          hub: String,
+        },
+      ],
       default: [],
     },
     budgetBreakdown: {

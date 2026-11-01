@@ -5,6 +5,7 @@ import { GenerationJob } from '../../models/GenerationJob.model';
 import { NotFoundError, ForbiddenError } from '../../shared/errors';
 import { CreateTripInput, UpdateTripInput } from './trips.validation';
 import { ITEMS_PER_PAGE } from '../../config/constants';
+import { geocodingService } from '../../services/geocoding.service';
 
 export interface PaginatedTrips {
   trips: ITripDocument[];
@@ -46,6 +47,17 @@ export async function createTrip(
     addlStr = (data.preferences as any).additional.specialRequests || '';
   }
 
+  // Geocode destination location
+  let destCoords: { lat: number; lng: number } | undefined;
+  try {
+    const geo = await geocodingService.geocode(`${destCity || destName}, ${destCountry}`);
+    if (geo) {
+      destCoords = { lat: geo.lat, lng: geo.lng };
+    }
+  } catch (err: any) {
+    console.warn('[Trip Destination Geocode Error]', err.message);
+  }
+
   const trip = await Trip.create({
     userId,
     destination: {
@@ -53,6 +65,7 @@ export async function createTrip(
       country: destCountry,
       city: destCity,
       region: data.destination.region || '',
+      coordinates: destCoords,
     },
     startingLocation,
     dates: {

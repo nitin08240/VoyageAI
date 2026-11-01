@@ -13,6 +13,7 @@ import usersRoutes from './modules/users/users.routes';
 import tripsRoutes from './modules/trips/trips.routes';
 import aiRoutes from './modules/ai/ai.routes';
 import itinerariesRoutes from './modules/itineraries/itineraries.routes';
+import chatRoutes from './modules/chat/chat.routes';
 import * as tripsController from './modules/trips/trips.controller';
 
 const app: Express = express();
@@ -73,6 +74,7 @@ app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/trips', tripsRoutes);
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/itineraries', itinerariesRoutes);
+app.use('/api/v1/chat', chatRoutes);
 
 // ─── Public Shared Trip ────────────────────────────────────────────────────────
 app.get('/api/v1/shared/:token', optionalAuthenticate, tripsController.getSharedTrip as any);

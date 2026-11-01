@@ -38,9 +38,23 @@ export async function getItinerary(
 
     // Auto-enrich images and weather if missing or empty
     const destName = trip.destination?.city || trip.destination?.name || 'Destination';
-    const coords = itinerary.hotels?.[0]?.coordinates || (itinerary.days?.[0] as any)?.morning?.[0]?.coordinates;
-
     let needsSave = false;
+
+    // Check if geocodes are missing or out-of-region
+    const hasOutdatedCoordinates =
+      !itinerary.destinationCoordinates ||
+      (itinerary.hotels?.[0]?.coordinates?.lat === 35.0116 && !destName.toLowerCase().includes('kyoto'));
+
+    if (hasOutdatedCoordinates) {
+      try {
+        const geoModified = await geocodingService.geocodeItinerary(itinerary, destName);
+        if (geoModified) needsSave = true;
+      } catch (err: any) {
+        console.warn('[Auto-Geocode Check]', err.message);
+      }
+    }
+
+    const coords = itinerary.destinationCoordinates || itinerary.hotels?.[0]?.coordinates || (itinerary.days?.[0] as any)?.morning?.[0]?.coordinates;
 
     if (!itinerary.destinationMedia?.heroUrl) {
       try {
@@ -61,11 +75,15 @@ export async function getItinerary(
     }
 
     if (needsSave) {
-      itinerary.markModified('destinationMedia');
-      itinerary.markModified('days');
-      itinerary.markModified('hotels');
-      itinerary.markModified('restaurants');
-      await itinerary.save();
+      try {
+        itinerary.markModified('destinationMedia');
+        itinerary.markModified('days');
+        itinerary.markModified('hotels');
+        itinerary.markModified('restaurants');
+        await itinerary.save();
+      } catch (saveErr: any) {
+        console.warn('[Auto-Enrich Save Non-blocking Notice]:', saveErr.message);
+      }
     }
 
     sendSuccess(res, { itinerary, trip }, 'Itinerary retrieved');

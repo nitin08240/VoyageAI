@@ -51,7 +51,7 @@ export const AIProgressIndicator: React.FC<AIProgressIndicatorProps> = ({
         {currentStep}
       </p>
       <p className="text-slate-400 text-xs mb-6">
-        Gemini 2.0 Flash is analyzing thousands of travel data points for <span className="text-accent-400 font-semibold">{destination}</span>.
+        VoyageAI is analyzing thousands of travel data points for <span className="text-accent-400 font-semibold">{destination}</span>.
       </p>
 
       {/* Progress Bar */}

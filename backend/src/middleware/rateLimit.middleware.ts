@@ -47,3 +47,15 @@ export const aiLimiter = rateLimit({
   handler: rateLimitHandler,
   message: 'AI generation limit reached. You can generate up to 20 itineraries per hour.',
 });
+
+/**
+ * Chat assistant rate limiter: 20 requests per minute in prod, 200 in dev.
+ */
+export const chatLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isDev ? 200 : (env.CHAT_RATE_LIMIT || 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+  message: 'Chat rate limit exceeded. Please wait a moment before sending another message.',
+});

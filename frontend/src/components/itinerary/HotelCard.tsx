@@ -1,12 +1,14 @@
 import React from 'react';
-import { BedDouble, MapPin, ExternalLink, ShieldCheck, Sparkles } from 'lucide-react';
+import { BedDouble, MapPin, ExternalLink, ShieldCheck, Sparkles, Compass } from 'lucide-react';
 import { IHotel } from '@/types/itinerary.types';
+import { formatPriceRange, getCurrencySymbol } from '@/lib/currency';
 
 interface HotelCardProps {
   hotel: IHotel;
+  onViewOnMap?: (hotelName: string) => void;
 }
 
-export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
+export const HotelCard: React.FC<HotelCardProps> = ({ hotel, onViewOnMap }) => {
   const bookingUrl =
     hotel.bookingUrl ||
     `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ' ' + (hotel.city || hotel.location))}`;
@@ -47,7 +49,9 @@ export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
             )}
           </div>
           <div className="text-sm font-bold text-accent-400">
-            {hotel.priceRange || '$150 - $220 / night'}
+            {hotel.priceRange
+              ? formatPriceRange(hotel.priceRange, hotel.currency || 'INR')
+              : `${getCurrencySymbol(hotel.currency || 'INR')}3,500 - ${getCurrencySymbol(hotel.currency || 'INR')}6,000 / night`}
           </div>
         </div>
 
@@ -84,16 +88,26 @@ export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
         )}
       </div>
 
-      {/* CTA: Live booking link */}
+      {/* CTA: Map & Live booking link */}
       <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-        <span className="text-[10px] text-slate-400 uppercase tracking-wider">
-          AI Suggested Stay
-        </span>
+        {onViewOnMap ? (
+          <button
+            type="button"
+            onClick={() => onViewOnMap(hotel.name)}
+            className="text-xs text-accent-400 hover:text-accent-300 font-semibold flex items-center gap-1.5 transition-colors"
+          >
+            <Compass className="w-3.5 h-3.5" /> View on Map
+          </button>
+        ) : (
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider">
+            AI Suggested Stay
+          </span>
+        )}
         <a
           href={bookingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-accent-400 hover:text-accent-300 font-semibold flex items-center gap-1 group"
+          className="text-xs text-accent-400 hover:text-accent-300 font-semibold flex items-center gap-1 group ml-auto"
         >
           Check Availability <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </a>

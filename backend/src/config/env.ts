@@ -20,6 +20,14 @@ const envSchema = z.object({
   RESET_TOKEN_EXPIRY_MS: z.string().optional(),
   UNSPLASH_ACCESS_KEY: z.string().optional(),
   OPENWEATHER_API_KEY: z.string().optional(),
+
+  // Chat & AI Provider Configuration
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
+  AI_PRIMARY_PROVIDER: z.enum(['gemini', 'groq']).default('gemini'),
+  AI_FALLBACK_PROVIDER: z.enum(['gemini', 'groq']).default('groq'),
+  CHAT_MAX_HISTORY_MESSAGES: z.coerce.number().default(20),
+  CHAT_RATE_LIMIT: z.coerce.number().default(20),
 });
 
 export type Env = z.infer<typeof envSchema>;

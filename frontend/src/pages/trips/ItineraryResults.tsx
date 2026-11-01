@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -18,9 +18,11 @@ import {
   Check,
   Copy,
   Info,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { formatCurrency } from '@/lib/currency';
+import { generateItineraryPDF } from '@/lib/pdfExporter';
 
 import PageWrapper from '@/components/layout/PageWrapper';
 import { Button } from '@/components/ui/Button';
@@ -59,6 +61,7 @@ export const ItineraryResults: React.FC = () => {
   const [itinerary, setItinerary] = useState<IItinerary | null>(null);
   const [trip, setTrip] = useState<ITrip | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
@@ -68,62 +71,41 @@ export const ItineraryResults: React.FC = () => {
 
   const printableRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const fetchTripData = useCallback(async () => {
     if (!tripId) return;
     setIsLoading(true);
+    setLoadError(null);
 
-    Promise.all([
-      itineraryService.getItinerary(tripId),
-      tripService.getTripById(tripId),
-    ])
-      .then(([itinData, tripData]) => {
-        setItinerary(itinData);
-        setTrip(tripData);
-      })
-      .catch((err) => {
-        console.error('Failed to load itinerary:', err);
-      })
-      .finally(() => setIsLoading(false));
+    try {
+      const [itinData, tripData] = await Promise.all([
+        itineraryService.getItinerary(tripId),
+        tripService.getTripById(tripId),
+      ]);
+      setItinerary(itinData);
+      setTrip(tripData);
+    } catch (err: any) {
+      console.error('Failed to load itinerary:', err);
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Could not load itinerary. The server may be busy or reconnecting.';
+      setLoadError(errMsg);
+    } finally {
+      setIsLoading(false);
+    }
   }, [tripId]);
 
-  // PDF Export using jsPDF & printable DOM
+  useEffect(() => {
+    fetchTripData();
+  }, [fetchTripData]);
+
+  // Professional multi-page PDF Export
   const handleExportPDF = async () => {
-    if (!printableRef.current || !trip) return;
+    if (!trip || !itinerary) return;
     setIsExporting(true);
 
     try {
-      const element = printableRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#0a0f1e',
-      });
-      const imgData = canvas.toDataURL('image/png');
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      const destName = trip.destination?.city || (trip.destination as any)?.name || 'Voyage';
-      pdf.save(`VoyageAI-Itinerary-${destName}.pdf`);
+      await generateItineraryPDF(trip, itinerary);
     } catch (err) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF. Please try again.');
@@ -174,20 +156,51 @@ export const ItineraryResults: React.FC = () => {
     return (
       <PageWrapper>
         <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-6">
-          <div className="w-16 h-16 rounded-full bg-accent-500/10 border border-accent-500/20 text-accent-400 flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8" />
-          </div>
-          <h2 className="text-2xl font-serif font-bold text-white mb-2">No Itinerary Found</h2>
-          <p className="text-slate-400 text-xs sm:text-sm max-w-md mb-6">
-            We couldn't retrieve an itinerary for this trip. Generate one now with Gemini.
-          </p>
-          <Button
-            variant="primary"
-            onClick={() => navigate(`/trips/${tripId}/generate`)}
-            className="text-xs font-semibold"
-          >
-            Generate Itinerary Now
-          </Button>
+          {loadError ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-serif font-bold text-white mb-2">Connection Hiccup</h2>
+              <p className="text-slate-400 text-xs sm:text-sm max-w-md mb-6">
+                {loadError}
+              </p>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="primary"
+                  onClick={fetchTripData}
+                  className="text-xs font-semibold flex items-center gap-2"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Retry Loading
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate(`/trips/${tripId}/generate`)}
+                  className="text-xs font-semibold"
+                >
+                  Regenerate Trip
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-accent-500/10 border border-accent-500/20 text-accent-400 flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-serif font-bold text-white mb-2">No Itinerary Found</h2>
+              <p className="text-slate-400 text-xs sm:text-sm max-w-md mb-6">
+                We couldn't retrieve an itinerary for this trip. Generate one now with Gemini.
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => navigate(`/trips/${tripId}/generate`)}
+                className="text-xs font-semibold"
+              >
+                Generate Itinerary Now
+              </Button>
+            </>
+          )}
         </div>
       </PageWrapper>
     );
@@ -250,7 +263,11 @@ export const ItineraryResults: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <Wallet className="w-4 h-4 text-emerald-400" />
                 <span>
-                  {trip.budget?.currency || 'USD'} {(trip.budget?.amount ?? trip.budget?.total ?? itinerary.budgetBreakdown?.total ?? 0).toLocaleString()} Budget
+                  {formatCurrency(
+                    trip.budget?.amount ?? trip.budget?.total ?? itinerary.budgetBreakdown?.total ?? 0,
+                    trip.budget?.currency || 'USD'
+                  )}{' '}
+                  Budget
                 </span>
               </div>
             </div>
@@ -477,7 +494,14 @@ export const ItineraryResults: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {itinerary.hotels?.map((hotel, idx) => (
-                  <HotelCard key={idx} hotel={hotel} />
+                  <HotelCard
+                    key={idx}
+                    hotel={hotel}
+                    onViewOnMap={(name) => {
+                      setSelectedLocationId(name);
+                      setActiveTab('map');
+                    }}
+                  />
                 ))}
               </div>
             </div>
@@ -492,7 +516,14 @@ export const ItineraryResults: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {itinerary.restaurants?.map((restaurant, idx) => (
-                  <RestaurantCard key={idx} restaurant={restaurant} />
+                  <RestaurantCard
+                    key={idx}
+                    restaurant={restaurant}
+                    onViewOnMap={(name) => {
+                      setSelectedLocationId(name);
+                      setActiveTab('map');
+                    }}
+                  />
                 ))}
               </div>
             </div>
@@ -507,11 +538,25 @@ export const ItineraryResults: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {itinerary.activities?.map((act, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl glass-card border border-white/10 flex items-start gap-3">
-                    <Compass className="w-5 h-5 text-accent-400 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-bold text-white text-sm">{act.name}</h4>
-                      <p className="text-xs text-slate-300 mt-1 leading-relaxed">{act.description}</p>
+                  <div key={idx} className="p-5 rounded-2xl glass-card border border-white/10 flex flex-col justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Compass className="w-5 h-5 text-accent-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-bold text-white text-sm">{act.name}</h4>
+                        <p className="text-xs text-slate-300 mt-1 leading-relaxed">{act.description}</p>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedLocationId(act.name);
+                          setActiveTab('map');
+                        }}
+                        className="text-xs text-accent-400 hover:text-accent-300 font-semibold flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg bg-accent-500/10 hover:bg-accent-500/20 border border-accent-500/20"
+                      >
+                        <Compass className="w-3.5 h-3.5" /> View on Map
+                      </button>
                     </div>
                   </div>
                 ))}

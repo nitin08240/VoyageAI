@@ -5,6 +5,7 @@ export const coordinatesSchema = z
     lat: z.number(),
     lng: z.number(),
   })
+  .nullable()
   .optional();
 
 export const activitySchema = z.object({
@@ -12,7 +13,7 @@ export const activitySchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
   duration: z.string().default('2 hours'),
-  cost: z.number().nonnegative().default(0),
+  cost: z.union([z.number(), z.string()]).default(0),
   travelTime: z.string().default('15 mins'),
   transportation: z.string().default('Walk'),
   mapLink: z.string().optional(),
@@ -26,14 +27,14 @@ export const daySchema = z.object({
   morning: z.array(activitySchema).min(1),
   afternoon: z.array(activitySchema).min(1),
   evening: z.array(activitySchema).min(1),
-  practicalAdvice: z.string().optional().default('Stay hydrated and keep copies of your ID.'),
+  practicalAdvice: z.string().optional().default('Wear comfortable walking shoes and stay hydrated.'),
 });
 
 export const hotelSchema = z.object({
   name: z.string().min(1),
   location: z.string().min(1),
   category: z.string().default('Standard'),
-  priceRange: z.string().default('$100 - $150 / night'),
+  priceRange: z.string().default('Mid-range accommodation'),
   facilities: z.array(z.string()).default([]),
   whyRecommended: z.string().min(1),
   bookingLink: z.string().optional(),
@@ -44,11 +45,28 @@ export const hotelSchema = z.object({
 export const restaurantSchema = z.object({
   name: z.string().min(1),
   cuisine: z.string().min(1),
-  estimatedCost: z.number().nonnegative().default(20),
+  estimatedCost: z.union([z.number(), z.string()]).default(0),
   dietarySuitability: z.array(z.string()).default([]),
   location: z.string().min(1),
+  mustTry: z.string().optional(),
+  whyRecommended: z.string().optional(),
   verified: z.boolean().default(false),
   coordinates: coordinatesSchema,
+});
+
+export const structuredSignatureActivitySchema = z.object({
+  name: z.string().min(1),
+  description: z.string().default(''),
+  location: z.string().optional().default(''),
+  category: z.string().optional().default('Sightseeing'),
+  estimatedDuration: z.union([z.number(), z.string()]).optional().default('2 hours'),
+  estimatedCost: z.union([z.number(), z.string()]).optional().default(0),
+  currency: z.string().optional(),
+  bestTime: z.string().optional().default('Morning'),
+  transportMode: z.string().optional().default('Walk'),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  imageUrl: z.string().optional(),
 });
 
 export const budgetBreakdownSchema = z.object({
@@ -83,7 +101,7 @@ export const geminiItineraryResponseSchema = z.object({
   days: z.array(daySchema).min(1),
   hotels: z.array(hotelSchema).min(1),
   restaurants: z.array(restaurantSchema).min(1),
-  activities: z.array(z.string()).default([]),
+  activities: z.array(z.union([z.string(), structuredSignatureActivitySchema])).default([]),
   budgetBreakdown: budgetBreakdownSchema,
   safetyTips: z.array(z.string()).default([]),
   thingsToAvoid: z.array(z.string()).default([]),

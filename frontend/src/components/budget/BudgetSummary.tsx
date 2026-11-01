@@ -1,6 +1,7 @@
 import React from 'react';
 import { Wallet, AlertTriangle, CheckCircle, TrendingUp, Users } from 'lucide-react';
 import { IBudgetBreakdown } from '@/types/itinerary.types';
+import { formatCurrency } from '@/lib/currency';
 import BudgetChart from './BudgetChart';
 
 interface BudgetSummaryProps {
@@ -39,7 +40,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
           <div>
             <div className="text-sm font-bold text-amber-300">Target Budget Exceeded</div>
             <div className="text-xs text-amber-200/80 mt-0.5">
-              The estimated total exceeds your target by {currency} {variance.toLocaleString()}. Consider adjusting stay tier or activities.
+              The estimated total exceeds your target by {formatCurrency(variance, currency)}. Consider adjusting stay tier or activities.
             </div>
           </div>
         </div>
@@ -49,7 +50,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
           <div>
             <div className="text-sm font-bold text-emerald-300">Within Planned Budget</div>
             <div className="text-xs text-emerald-200/80 mt-0.5">
-              Estimated expenses fit your budget with {currency} {variance.toLocaleString()} buffer remaining.
+              Estimated expenses fit your budget with {formatCurrency(variance, currency)} buffer remaining.
             </div>
           </div>
         </div>
@@ -62,7 +63,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
             <Wallet className="w-4 h-4 text-accent-400" /> Target Budget
           </div>
           <div className="text-2xl font-serif font-bold text-white">
-            {currency} {targetBudget.toLocaleString()}
+            {formatCurrency(targetBudget, currency)}
           </div>
         </div>
 
@@ -71,7 +72,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
             <TrendingUp className="w-4 h-4 text-emerald-400" /> Estimated Spend
           </div>
           <div className="text-2xl font-serif font-bold text-white">
-            {currency} {budget.total.toLocaleString()}
+            {formatCurrency(budget.total, currency)}
           </div>
         </div>
 
@@ -80,7 +81,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
             <Users className="w-4 h-4 text-sky-400" /> Per Person
           </div>
           <div className="text-2xl font-serif font-bold text-white">
-            {currency} {perPerson.toLocaleString()}
+            {formatCurrency(perPerson, currency)}
           </div>
         </div>
       </div>
@@ -102,7 +103,7 @@ export const BudgetSummary: React.FC<BudgetSummaryProps> = ({
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-slate-300 font-medium">{cat.label}</span>
                   <span className="font-bold text-white">
-                    {budget.currency} {cat.amount.toLocaleString()}{' '}
+                    {formatCurrency(cat.amount, budget.currency)}{' '}
                     <span className="text-slate-400 font-normal">({pct}%)</span>
                   </span>
                 </div>

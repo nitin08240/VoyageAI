@@ -13,10 +13,10 @@ export const DayAttractionGallery: React.FC<DayAttractionGalleryProps> = ({
   dayNumber,
   onSelectAttraction,
 }) => {
-  // Filter activities that have photos or valid names
-  const itemsWithImages = activities.filter((act) => act.imageUrl || act.thumbUrl);
+  // Filter activities that have valid names
+  const itemsWithImages = activities.filter((act) => act.name && act.name.trim().length > 0);
 
-  // If no specific activity images are loaded yet, return null
+  // If no activities for this day, return null
   if (itemsWithImages.length === 0) {
     return null;
   }

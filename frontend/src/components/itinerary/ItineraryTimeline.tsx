@@ -21,6 +21,39 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
 }) => {
   const [expandedDay, setExpandedDay] = useState<number>(1);
 
+  // Auto-expand day when selectedLocationId matches an activity in that day
+  React.useEffect(() => {
+    if (!selectedLocationId || !days?.length) return;
+    const target = selectedLocationId.toLowerCase().trim();
+
+    for (let idx = 0; idx < days.length; idx++) {
+      const day = days[idx];
+      const dayNum = day.dayNumber ?? day.day ?? (idx + 1);
+
+      const allDayActs = [
+        ...(day.morning || []),
+        ...(day.afternoon || []),
+        ...(day.evening || []),
+        ...(day.activities || []),
+      ];
+
+      const matches = allDayActs.some((act: any, i: number) => {
+        const idMatches =
+          target === `day-${dayNum}-morning-${i}` ||
+          target === `day-${dayNum}-afternoon-${i}` ||
+          target === `day-${dayNum}-evening-${i}` ||
+          target === `day-${dayNum}-${i}`;
+        const nameMatches = act.name && act.name.toLowerCase().includes(target) || target.includes(act.name?.toLowerCase());
+        return idMatches || nameMatches;
+      });
+
+      if (matches) {
+        setExpandedDay(dayNum);
+        break;
+      }
+    }
+  }, [selectedLocationId, days]);
+
   const toggleDay = (dayNum: number) => {
     setExpandedDay(expandedDay === dayNum ? 0 : dayNum);
   };
@@ -136,6 +169,7 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                               activity={act}
                               isSelected={selectedLocationId === actId || selectedLocationId === act.name}
                               onSelect={() => onLocationSelect?.(actId, dayNum)}
+                              onViewOnMap={() => onLocationSelect?.(actId, dayNum)}
                             />
                           );
                         })}
@@ -158,6 +192,7 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                               activity={act}
                               isSelected={selectedLocationId === actId || selectedLocationId === act.name}
                               onSelect={() => onLocationSelect?.(actId, dayNum)}
+                              onViewOnMap={() => onLocationSelect?.(actId, dayNum)}
                             />
                           );
                         })}
@@ -180,6 +215,7 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                               activity={act}
                               isSelected={selectedLocationId === actId || selectedLocationId === act.name}
                               onSelect={() => onLocationSelect?.(actId, dayNum)}
+                              onViewOnMap={() => onLocationSelect?.(actId, dayNum)}
                             />
                           );
                         })}

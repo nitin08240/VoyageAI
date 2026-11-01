@@ -88,6 +88,18 @@ export function globalErrorHandler(
     return;
   }
 
+  // ── MongoDB Transient Network / Selection Errors ────────────────────────────
+  if (
+    err instanceof Error &&
+    (err.name === 'MongoServerSelectionError' ||
+      err.name === 'MongoNetworkError' ||
+      err.name === 'MongoTopologyClosedError')
+  ) {
+    console.warn('⚠️  MongoDB transient connection hiccup:', err.message);
+    sendError(res, 'Database connection is temporarily busy or reconnecting. Please retry shortly.', 503);
+    return;
+  }
+
   // ── Unknown / Unexpected Errors ─────────────────────────────────────────────
   if (!isProd && err instanceof Error) {
     console.error('💥 Unhandled error:', err);

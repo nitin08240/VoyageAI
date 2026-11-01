@@ -21,6 +21,7 @@ import MyTrips from '@/pages/trips/MyTrips';
 import TripDetails from '@/pages/trips/TripDetails';
 import Profile from '@/pages/user/Profile';
 import Settings from '@/pages/user/Settings';
+import FloatingChatWidget from '@/components/chat/FloatingChatWidget';
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -172,6 +173,7 @@ export const App: React.FC = () => {
         {/* 404 Route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <FloatingChatWidget />
     </BrowserRouter>
   );
 };

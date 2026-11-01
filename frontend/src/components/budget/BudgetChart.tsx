@@ -1,6 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { IBudgetBreakdown } from '@/types/itinerary.types';
+import { formatCurrency } from '@/lib/currency';
 
 interface BudgetChartProps {
   budget: IBudgetBreakdown;
@@ -31,7 +32,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ budget }) => {
         <div className="bg-navy-950/95 border border-white/10 p-3 rounded-xl shadow-2xl backdrop-blur-md">
           <div className="text-xs text-slate-400 font-medium">{data.name}</div>
           <div className="text-sm font-bold text-white mt-0.5">
-            {budget.currency || '$'} {data.value.toLocaleString()}
+            {formatCurrency(data.value, budget.currency)}
           </div>
         </div>
       );
@@ -64,7 +65,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ budget }) => {
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span className="text-[10px] uppercase tracking-wider text-slate-400">Total Est.</span>
         <span className="text-xl font-bold font-serif text-white">
-          {budget.currency || '$'}{budget.total.toLocaleString()}
+          {formatCurrency(budget.total, budget.currency)}
         </span>
       </div>
     </div>

@@ -95,10 +95,10 @@ export const Dashboard: React.FC = () => {
 
           <div className="p-5 rounded-2xl glass-card border border-white/10">
             <div className="flex items-center gap-2 text-xs text-slate-400 uppercase tracking-wider mb-1">
-              <Sparkles className="w-4 h-4 text-purple-400" /> AI Engine
+              <Sparkles className="w-4 h-4 text-accent-400" /> AI Engine
             </div>
             <div className="text-2xl sm:text-3xl font-serif font-bold text-white">
-              Gemini 3.8
+              Smart Planner
             </div>
             <div className="text-[11px] text-emerald-400 mt-1 font-semibold flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live & Ready
@@ -189,7 +189,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-bold text-white">No trips created yet</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Start your first adventure! Configure destination, dates, budget, and let Gemini generate your custom plan.
+                Start your first adventure! Configure destination, dates, budget, and let VoyageAI generate your custom plan.
               </p>
               <Button
                 variant="primary"

@@ -13,7 +13,7 @@ export const AIProgress: React.FC = () => {
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(15);
-  const [statusMessage, setStatusMessage] = useState<string>('Connecting to Gemini AI Engine...');
+  const [statusMessage, setStatusMessage] = useState<string>('Connecting to VoyageAI Engine...');
   const [destinationName, setDestinationName] = useState<string>('your destination');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFailed, setIsFailed] = useState<boolean>(false);

@@ -1,17 +1,21 @@
 import mongoose from 'mongoose';
 import { env } from './env';
 
-const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_INTERVAL_MS = 5000;
-
-let reconnectAttempts = 0;
-let isConnecting = false;
+const MONGOOSE_OPTIONS: mongoose.ConnectOptions = {
+  serverSelectionTimeoutMS: 30000, // 30s allows Atlas replica set elections & transient failover without error
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 30000,
+  maxPoolSize: 25,
+  minPoolSize: 2,
+  retryWrites: true,
+  retryReads: true,
+  heartbeatFrequencyMS: 10000,
+  autoIndex: true,
+};
 
 function setupConnectionEvents(): void {
   mongoose.connection.on('connected', () => {
     console.log('✅ MongoDB connected successfully');
-    reconnectAttempts = 0;
-    isConnecting = false;
   });
 
   mongoose.connection.on('error', (err: Error) => {
@@ -19,16 +23,11 @@ function setupConnectionEvents(): void {
   });
 
   mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  MongoDB disconnected');
-    if (!isConnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-      scheduleReconnect();
-    }
+    console.warn('⚠️  MongoDB disconnected. Driver is handling automatic topology reconnection...');
   });
 
   mongoose.connection.on('reconnected', () => {
-    console.log('🔄 MongoDB reconnected');
-    reconnectAttempts = 0;
-    isConnecting = false;
+    console.log('🔄 MongoDB reconnected successfully');
   });
 
   mongoose.connection.on('close', () => {
@@ -36,43 +35,12 @@ function setupConnectionEvents(): void {
   });
 }
 
-function scheduleReconnect(): void {
-  reconnectAttempts += 1;
-  const delay = RECONNECT_INTERVAL_MS * reconnectAttempts;
-
-  console.log(
-    `🔄 Attempting MongoDB reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`
-  );
-
-  setTimeout(async () => {
-    try {
-      isConnecting = true;
-      await mongoose.connect(env.MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
-      });
-    } catch (err) {
-      console.error('❌ MongoDB reconnect failed:', (err as Error).message);
-      isConnecting = false;
-      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-        scheduleReconnect();
-      } else {
-        console.error('💀 Max reconnect attempts reached. Shutting down...');
-        process.exit(1);
-      }
-    }
-  }, delay);
-}
-
 export async function connectDB(): Promise<void> {
   try {
     setupConnectionEvents();
 
-    console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
+    console.log('🔌 Connecting to MongoDB Atlas...');
+    await mongoose.connect(env.MONGODB_URI, MONGOOSE_OPTIONS);
   } catch (err) {
     console.error('❌ Initial MongoDB connection failed:', (err as Error).message);
     console.warn('⚠️  Note: If using MongoDB Atlas, please ensure your IP address is whitelisted in Atlas Network Access (e.g. 0.0.0.0/0 for testing).');

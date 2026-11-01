@@ -8,11 +8,11 @@ interface Step6AccommodationProps {
 }
 
 const ACCOMMODATIONS = [
-  { id: 'hostel', label: 'Hostel / Social Dorm', desc: 'Social vibe, communal kitchens, ultra budget', price: '$', icon: Home },
-  { id: 'budget_hotel', label: 'Budget Hotel / Inn', desc: 'Clean private room, basic amenities, great transit', price: '$$', icon: Building },
-  { id: 'standard_hotel', label: 'Standard 3-Star Hotel', desc: 'Comfortable, private en-suite, central location', price: '$$$', icon: BedDouble },
-  { id: 'premium_hotel', label: 'Premium 4-Star Boutique', desc: 'Character, designer aesthetics, great breakfast', price: '$$$$', icon: Sparkles },
-  { id: 'luxury_resort', label: '5-Star Luxury Resort', desc: 'Spa, concierge service, prime views, fine dining', price: '$$$$$', icon: Castle },
+  { id: 'hostel', label: 'Hostel / Social Dorm', desc: 'Social vibe, communal kitchens, ultra budget', icon: Home },
+  { id: 'budget_hotel', label: 'Budget Hotel / Inn', desc: 'Clean private room, basic amenities, great transit', icon: Building },
+  { id: 'standard_hotel', label: 'Standard 3-Star Hotel', desc: 'Comfortable, private en-suite, central location', icon: BedDouble },
+  { id: 'premium_hotel', label: 'Premium 4-Star Boutique', desc: 'Character, designer aesthetics, great breakfast', icon: Sparkles },
+  { id: 'luxury_resort', label: '5-Star Luxury Resort', desc: 'Spa, concierge service, prime views, fine dining', icon: Castle },
 ] as const;
 
 export const Step6Accommodation: React.FC<Step6AccommodationProps> = ({ data, onChange }) => {
@@ -51,10 +51,6 @@ export const Step6Accommodation: React.FC<Step6AccommodationProps> = ({ data, on
                   <div className="font-semibold text-sm text-white">{acc.label}</div>
                   <div className="text-xs text-slate-400">{acc.desc}</div>
                 </div>
-              </div>
-
-              <div className="text-xs font-bold text-accent-400 tracking-widest px-3 py-1 rounded-full bg-accent-500/10 border border-accent-500/20">
-                {acc.price}
               </div>
             </button>
           );

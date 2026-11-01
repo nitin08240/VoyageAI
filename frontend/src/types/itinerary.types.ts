@@ -56,6 +56,9 @@ export interface IActivity {
   thumbUrl?: string;
   imagePhotographer?: string;
   imagePhotographerUrl?: string;
+  photoId?: string;
+  placeId?: string;
+  distanceKm?: number;
 }
 
 export interface IHotel {
@@ -79,6 +82,9 @@ export interface IHotel {
   thumbUrl?: string;
   imagePhotographer?: string;
   imagePhotographerUrl?: string;
+  photoId?: string;
+  placeId?: string;
+  distanceKm?: number;
 }
 
 export interface IRestaurant {
@@ -97,6 +103,9 @@ export interface IRestaurant {
   thumbUrl?: string;
   imagePhotographer?: string;
   imagePhotographerUrl?: string;
+  photoId?: string;
+  placeId?: string;
+  distanceKm?: number;
 }
 
 export interface ICoordinates {
@@ -180,6 +189,7 @@ export interface IItinerary {
   hotels: IHotel[];
   restaurants: IRestaurant[];
   activities?: any[];
+  nearbyDiscoveredPlaces?: any[];
   budgetBreakdown: IBudgetBreakdown;
   packingChecklist: IPackingChecklist;
   safetyTips: any[];

@@ -140,19 +140,62 @@ class GeocodingService {
   }
 
   /**
-   * Geocode missing coordinates in an itinerary document and return whether changes occurred.
+   * Calculate Haversine distance in km between two lat/lng points.
+   */
+  public getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  /**
+   * Geocode missing or out-of-region coordinates in an itinerary document.
    */
   public async geocodeItinerary(itinerary: any, destinationContext?: string): Promise<boolean> {
     let modified = false;
 
+    // First resolve destination coordinates as anchor
+    const destContext = destinationContext || itinerary.overview?.destination || '';
+    let destCenter: GeocodeResult | null = null;
+    if (destContext) {
+      destCenter = await this.geocode(destContext);
+      if (destCenter) {
+        itinerary.destinationCoordinates = { lat: destCenter.lat, lng: destCenter.lng };
+        modified = true;
+      }
+    }
+
+    // Proximity check function: returns false if coordinates are >150km away from destination
+    const isCoordinateValidForDestination = (coords?: { lat: number; lng: number }): boolean => {
+      if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number') return false;
+      if (isNaN(coords.lat) || isNaN(coords.lng)) return false;
+      if (destCenter) {
+        const dist = this.getDistanceKm(destCenter.lat, destCenter.lng, coords.lat, coords.lng);
+        if (dist > 150) {
+          // Out of region (e.g. Kyoto coordinates when destination is Manali)
+          return false;
+        }
+      }
+      return true;
+    };
+
     // 1. Geocode Hotels
     if (Array.isArray(itinerary.hotels)) {
       for (const hotel of itinerary.hotels) {
-        if (!hotel.coordinates || !hotel.coordinates.lat || !hotel.coordinates.lng) {
-          const res = await this.geocode(hotel.name, hotel.location || destinationContext);
+        if (!isCoordinateValidForDestination(hotel.coordinates)) {
+          const res = await this.geocode(hotel.name, hotel.location || destContext);
           if (res) {
             hotel.coordinates = { lat: res.lat, lng: res.lng };
             hotel.verified = true;
+            modified = true;
+          } else if (destCenter) {
+            hotel.coordinates = { lat: destCenter.lat, lng: destCenter.lng };
             modified = true;
           }
         }
@@ -162,11 +205,14 @@ class GeocodingService {
     // 2. Geocode Restaurants
     if (Array.isArray(itinerary.restaurants)) {
       for (const rest of itinerary.restaurants) {
-        if (!rest.coordinates || !rest.coordinates.lat || !rest.coordinates.lng) {
-          const res = await this.geocode(rest.name, rest.location || destinationContext);
+        if (!isCoordinateValidForDestination(rest.coordinates)) {
+          const res = await this.geocode(rest.name, rest.location || destContext);
           if (res) {
             rest.coordinates = { lat: res.lat, lng: res.lng };
             rest.verified = true;
+            modified = true;
+          } else if (destCenter) {
+            rest.coordinates = { lat: destCenter.lat, lng: destCenter.lng };
             modified = true;
           }
         }
@@ -179,11 +225,20 @@ class GeocodingService {
         const slots = ['morning', 'afternoon', 'evening'] as const;
         for (const slot of slots) {
           if (Array.isArray(day[slot])) {
-            for (const act of day[slot]) {
-              if (!act.coordinates || !act.coordinates.lat || !act.coordinates.lng) {
-                const res = await this.geocode(act.name, destinationContext);
+            for (let actIdx = 0; actIdx < day[slot].length; actIdx++) {
+              const act = day[slot][actIdx];
+              if (!isCoordinateValidForDestination(act.coordinates)) {
+                const res = await this.geocode(act.name, destContext);
                 if (res) {
                   act.coordinates = { lat: res.lat, lng: res.lng };
+                  modified = true;
+                } else if (destCenter) {
+                  // Slight micro-jitter around destination center so points don't stack exactly on top of each other
+                  const offset = actIdx * 0.005;
+                  act.coordinates = {
+                    lat: Number((destCenter.lat + Math.sin(day.dayNumber + offset) * 0.015).toFixed(6)),
+                    lng: Number((destCenter.lng + Math.cos(day.dayNumber + offset) * 0.015).toFixed(6)),
+                  };
                   modified = true;
                 }
               }

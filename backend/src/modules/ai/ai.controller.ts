@@ -92,6 +92,7 @@ export async function getJobStatus(
 
     if (job.status === 'failed') {
       responseData.errorMessage = job.errorMessage || 'Generation failed. Please try again.';
+      responseData.error = responseData.errorMessage;
     }
 
     sendSuccess(res, responseData, 'Job status retrieved');

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Clock, MapPin, Navigation, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Clock, MapPin, Navigation, Coins, CheckCircle2, Compass } from 'lucide-react';
 import { IActivity } from '@/types/itinerary.types';
+import { formatCurrency } from '@/lib/currency';
 
 interface ActivityCardProps {
   activity: IActivity;
   isSelected?: boolean;
   onSelect?: () => void;
+  onViewOnMap?: () => void;
   onToggleComplete?: () => void;
 }
 
@@ -13,6 +15,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   activity,
   isSelected = false,
   onSelect,
+  onViewOnMap,
   onToggleComplete,
 }) => {
   const [completed, setCompleted] = useState(activity.completed || false);
@@ -99,35 +102,57 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         {activity.description}
       </p>
 
-      {/* Meta Bar: Cost, Transit, Map */}
-      <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-white/5 text-xs text-slate-400">
-        <div className="flex items-center gap-1 font-semibold text-emerald-400">
-          <DollarSign className="w-3.5 h-3.5" />
-          <span>
-            {activity.cost === '0' || activity.cost === 0 || activity.estimatedCost === 0 ? 'Free' : `$${activity.cost || activity.estimatedCost || '15'}`}
-          </span>
+      {/* Meta Bar: Cost, Transit, Map actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/5 text-xs text-slate-400">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 font-semibold text-emerald-400">
+            <Coins className="w-3.5 h-3.5" />
+            <span>
+              {formatCurrency(activity.cost ?? activity.estimatedCost, activity.currency || 'INR')}
+            </span>
+          </div>
+
+          {(activity.transportation || activity.transportToNext) && (
+            <div className="flex items-center gap-1">
+              <Navigation className="w-3.5 h-3.5 text-accent-400" />
+              <span>Transit: {activity.transportation || activity.transportToNext}</span>
+            </div>
+          )}
         </div>
 
-        {(activity.transportation || activity.transportToNext) && (
-          <div className="flex items-center gap-1">
-            <Navigation className="w-3.5 h-3.5 text-accent-400" />
-            <span>Transit: {activity.transportation || activity.transportToNext}</span>
-          </div>
-        )}
-
-        {(activity.coordinates || activity.location) && (
-          <a
-            href={osmUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 text-accent-400 hover:text-accent-300 hover:underline ml-auto"
-            title="Open in OpenStreetMap"
+        <div className="flex items-center gap-3 ml-auto">
+          {/* Interactive Map Focus Action */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onViewOnMap) {
+                onViewOnMap();
+              } else {
+                onSelect?.();
+              }
+            }}
+            className="flex items-center gap-1 text-accent-400 hover:text-accent-300 font-semibold transition-colors px-2.5 py-1 rounded-lg bg-accent-500/10 hover:bg-accent-500/20 border border-accent-500/20"
+            title="Focus venue on Interactive Map"
           >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>OSM Pin</span>
-          </a>
-        )}
+            <Compass className="w-3.5 h-3.5" />
+            <span>View on Map</span>
+          </button>
+
+          {(activity.coordinates || activity.location) && (
+            <a
+              href={osmUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors"
+              title="Open raw OpenStreetMap in new tab"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>OSM</span>
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

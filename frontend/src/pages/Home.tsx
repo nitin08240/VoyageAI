@@ -92,7 +92,7 @@ const HOW_IT_WORKS_STEPS = [
     title: 'Intelligent Preference Synthesis',
     subtitle: 'Dynamic Travel Constraints',
     description:
-      'Input your party dynamics, dietary nuances, daily pacing, and hard budget cap. Our Gemini AI engine synthesizes these variables into a unified logistical framework rather than generic recommendations.',
+      'Input your party dynamics, dietary nuances, daily pacing, and hard budget cap. Our AI engine synthesizes these variables into a unified logistical framework rather than generic recommendations.',
     bulletPoints: [
       'Tailored for solo wanderers, couples, families, or executive retreats',
       'Dietary alignment including Halal, vegan, kosher, and allergen awareness',
@@ -158,7 +158,7 @@ export const Home: React.FC = () => {
             {/* High-End Pill Badge */}
             <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.09] text-xs font-medium text-slate-300 tracking-wide backdrop-blur-xl">
               <span className="w-2 h-2 rounded-full bg-accent-400 animate-pulse" />
-              <span className="text-white font-semibold">Gemini 3.8 Intelligence</span>
+              <span className="text-white font-semibold">AI Travel Intelligence</span>
               <span className="text-slate-500">•</span>
               <span className="text-slate-400">Autonomous Travel Concierge</span>
             </div>
@@ -515,7 +515,7 @@ export const Home: React.FC = () => {
               Craft Your Masterpiece Itinerary
             </h2>
             <p className="text-slate-300 text-sm sm:text-base max-w-xl mx-auto mb-8 leading-relaxed font-light">
-              Enter your destination, select your travel companion dynamics, and let VoyageAI orchestrate every day, hotel, and transit leg with Gemini 3.8.
+              Enter your destination, select your travel companion dynamics, and let VoyageAI orchestrate every day, hotel, and transit leg with intelligent precision.
             </p>
             <Button
               size="lg"

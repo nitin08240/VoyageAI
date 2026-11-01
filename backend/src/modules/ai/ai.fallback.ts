@@ -1,185 +1,352 @@
 import { ITripDocument } from '../../models/Trip.model';
 import { GeminiItineraryResponse } from './response.schema';
+import { destinationIntelligenceService } from '../../services/destinationIntelligence.service';
+import { RegionalDiscoveryResult, nearbyDiscoveryService } from '../../services/nearbyDiscovery.service';
 
 const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  manali: { lat: 32.2396, lng: 77.1887 },
+  delhi: { lat: 28.6139, lng: 77.209 },
+  'new delhi': { lat: 28.6139, lng: 77.209 },
+  jaipur: { lat: 26.9124, lng: 75.7873 },
+  mumbai: { lat: 19.076, lng: 72.8777 },
+  goa: { lat: 15.2993, lng: 74.124 },
+  rishikesh: { lat: 30.0869, lng: 78.2676 },
+  haridwar: { lat: 29.9457, lng: 78.1642 },
+  agra: { lat: 27.1767, lng: 78.0081 },
+  shimla: { lat: 31.1048, lng: 77.1734 },
   kyoto: { lat: 35.0116, lng: 135.7681 },
   tokyo: { lat: 35.6762, lng: 139.6503 },
   paris: { lat: 48.8566, lng: 2.3522 },
   rome: { lat: 41.9028, lng: 12.4964 },
-  amalfi: { lat: 40.634, lng: 14.6027 },
   'new york': { lat: 40.7128, lng: -74.006 },
-  zurich: { lat: 47.3769, lng: 8.5417 },
-  reykjavik: { lat: 64.1466, lng: -21.9426 },
-  cairo: { lat: 30.0444, lng: 31.2357 },
-  rio: { lat: -22.9068, lng: -43.1729 },
-  sydney: { lat: -33.8688, lng: 151.2093 },
   london: { lat: 51.5074, lng: -0.1278 },
 };
 
-export function buildCuratedFallbackItinerary(trip: ITripDocument): GeminiItineraryResponse {
-  const city = trip.destination.city || trip.destination.name || 'Kyoto';
-  const country = trip.destination.country || 'Japan';
+export function buildCuratedFallbackItinerary(
+  trip: ITripDocument,
+  regionalDiscovery?: RegionalDiscoveryResult
+): GeminiItineraryResponse {
+  const city = trip.destination.city || trip.destination.name || 'Manali';
+  const country = trip.destination.country || 'India';
   const duration = Math.max(1, Math.min(trip.duration || 3, 14));
-  const totalBudget = trip.budget.total || 2500;
-  const currency = trip.budget.currency || 'USD';
+  const currency = trip.budget.currency || 'INR';
+  const totalBudget = trip.budget.total ?? (currency === 'INR' ? 45000 : 2500);
 
   const cityKey = city.toLowerCase().trim();
-  const baseCoords = CITY_COORDINATES[cityKey] || { lat: 35.0116, lng: 135.7681 };
+  const profile = destinationIntelligenceService.getProfile(cityKey);
 
-  // Calculate proportional budget allocation
-  const accommodation = Math.round(totalBudget * 0.40);
+  // Authoritative coordinates
+  const defaultCoord = country.toLowerCase().includes('india')
+    ? { lat: 32.2396, lng: 77.1887 }
+    : country.toLowerCase().includes('japan')
+    ? { lat: 35.6762, lng: 139.6503 }
+    : { lat: 48.8566, lng: 2.3522 };
+
+  const baseCoords =
+    regionalDiscovery?.destinationCenter ||
+    CITY_COORDINATES[cityKey] ||
+    defaultCoord;
+
+  const jitter = (offset: number) => ({
+    lat: Number((baseCoords.lat + Math.sin(offset) * 0.015).toFixed(4)),
+    lng: Number((baseCoords.lng + Math.cos(offset) * 0.015).toFixed(4)),
+  });
+
+  // Proportional budget allocation in selected currency
+  const accommodation = Math.round(totalBudget * 0.4);
   const food = Math.round(totalBudget * 0.25);
   const transportation = Math.round(totalBudget * 0.15);
-  const activitiesCost = Math.round(totalBudget * 0.10);
+  const activitiesCost = Math.round(totalBudget * 0.12);
   const shopping = Math.round(totalBudget * 0.05);
-  const emergencyReserve = totalBudget - (accommodation + food + transportation + activitiesCost + shopping);
+  const emergencyReserve =
+    totalBudget - (accommodation + food + transportation + activitiesCost + shopping);
 
   const startDate = trip.dates?.start ? new Date(trip.dates.start) : new Date();
 
-  // Generate days
   const days = [];
-  const dayThemes = [
-    { title: 'Historic Heritage & Cultural Landmarks', morning: 'Historic Temple & Shrine Walking Tour', afternoon: 'Traditional Craft Market & Tea Ceremony', evening: 'Lantern-lit Promenade & Gastronomy' },
-    { title: 'Nature, Serenity & Scenic Vistas', morning: 'Botanical Gardens & Bamboo Groves Walk', afternoon: 'Scenic River Cruise & Mountain Overlook', evening: 'Acoustic Sunset Dinner & Local Delicacies' },
-    { title: 'Modern Arts, Architecture & Night Markets', morning: 'Contemporary Art Gallery & Design District', afternoon: 'Artisan Workshop & Curated Boutiques', evening: 'Skyline Terrace Dining & Nightlife' },
-    { title: 'Gastronomy & Culinary Masterclasses', morning: 'Morning Food Market & Tasting Expedition', afternoon: 'Hands-on Cooking & Pastry Masterclass', evening: 'Michelin-selected Wine & Dine Experience' },
-    { title: 'Hidden Gems & Local Enclaves', morning: 'Quiet Residential Neighborhood Exploration', afternoon: 'Off-the-beaten-path Hidden Sanctuaries', evening: 'Farewell Culinary Celebration' },
-  ];
+  const sym = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+
+  // Base transport mode
+  const transportMode = profile?.hasMetro
+    ? 'Metro / Walk'
+    : profile?.isHillStation
+    ? 'Local Taxi / Walk'
+    : 'Cab / Walk';
+
+  // Build distinct days using Regional Discovery clusters if available
+  const clusters = regionalDiscovery?.suggestedDayClusters || [];
 
   for (let i = 1; i <= duration; i++) {
     const curDate = new Date(startDate);
     curDate.setDate(curDate.getDate() + (i - 1));
     const dateStr = curDate.toISOString().split('T')[0];
 
-    const theme = dayThemes[(i - 1) % dayThemes.length];
-
-    // Jitter coordinates slightly around city center for realistic map spreading
     const jitter = (offset: number) => ({
-      lat: Number((baseCoords.lat + (Math.sin(i * 3 + offset) * 0.03)).toFixed(4)),
-      lng: Number((baseCoords.lng + (Math.cos(i * 3 + offset) * 0.03)).toFixed(4)),
+      lat: Number((baseCoords.lat + Math.sin(i * 3 + offset) * 0.015).toFixed(4)),
+      lng: Number((baseCoords.lng + Math.cos(i * 3 + offset) * 0.015).toFixed(4)),
     });
 
-    days.push({
-      dayNumber: i,
-      date: dateStr,
-      title: `Day ${i}: ${theme.title}`,
-      morning: [
+    const morningCost = Math.round(activitiesCost / (duration * 2));
+    const afternoonCost = Math.round(activitiesCost / (duration * 2));
+
+    const cluster = clusters[i - 1];
+
+    if (cluster && cluster.attractions && cluster.attractions.length > 0) {
+      const act1 = cluster.attractions[0];
+      const act2 = cluster.attractions[1] || {
+        name: `${cluster.hubArea} Cultural Heritage & Gastronomy Trail`,
+        description: `Explore the vibrant local markets and sample authentic regional delicacies across ${cluster.hubArea}.`,
+        duration: '3 hours',
+        estimatedTravelMinutes: 20,
+        lat: Number((baseCoords.lat + 0.01).toFixed(4)),
+        lng: Number((baseCoords.lng + 0.01).toFixed(4)),
+      };
+      const act3 = cluster.attractions[2] || {
+        name: `${cluster.hubArea} Twilight Riverfront / Ridge Promenade`,
+        description: `Relaxing twilight promenade absorbing the evening ambiance and panoramic valley vistas of ${cluster.hubArea}.`,
+        duration: '2 hours',
+        estimatedTravelMinutes: 15,
+        lat: Number((baseCoords.lat + 0.02).toFixed(4)),
+        lng: Number((baseCoords.lng + 0.02).toFixed(4)),
+      };
+
+      const eveningAct = {
+        time: '06:30 PM',
+        name: act3.name,
+        description: act3.description,
+        duration: '2 hours',
+        cost: 0,
+        travelTime: `${(act3 as any).estimatedTravelMinutes || 15} mins`,
+        transportation: transportMode,
+        coordinates: { lat: act3.lat, lng: act3.lng },
+      };
+
+      days.push({
+        dayNumber: i,
+        date: dateStr,
+        title: `Day ${i}: ${cluster.theme}`,
+        morning: [
+          {
+            time: '09:00 AM',
+            name: act1.name,
+            description: act1.description,
+            duration: '2.5 hours',
+            cost: morningCost,
+            travelTime: `${act1.estimatedTravelMinutes || 20} mins`,
+            transportation: transportMode,
+            coordinates: { lat: act1.lat, lng: act1.lng },
+          },
+        ],
+        afternoon: [
+          {
+            time: '01:30 PM',
+            name: act2.name,
+            description: act2.description,
+            duration: '3 hours',
+            cost: afternoonCost,
+            travelTime: `${act2.estimatedTravelMinutes || 25} mins`,
+            transportation: transportMode,
+            coordinates: { lat: act2.lat, lng: act2.lng },
+          },
+        ],
+        evening: [eveningAct],
+        practicalAdvice: profile?.isHillStation
+          ? `Wear sturdy walking shoes with good grip. Keep layered woolens ready for evening temperature drops in ${cluster.hubArea}. Confirm your return road transport before dusk.`
+          : `Stay well hydrated, dress respectfully for sacred sites in ${cluster.hubArea}, and use registered taxis.`,
+      });
+    } else {
+      // Distinct, non-repeating generic fallback themes based on day index
+      const DAY_THEMES = [
         {
-          time: '08:30 AM',
-          name: `${city} ${theme.morning}`,
-          description: `Experience the serene morning atmosphere at ${city}'s iconic architectural and historical marvels before peak visiting hours.`,
-          duration: '3 hours',
-          cost: Math.round(activitiesCost / (duration * 2)),
-          travelTime: '15 mins',
-          transportation: 'Metro / Walking',
-          coordinates: jitter(1),
+          title: `Historic Landmarks & Sacred Heritage of ${city}`,
+          morning: `${city} Central Architectural & Cultural Monument`,
+          descMorn: `Discover the signature historic landmarks and heritage foundations of ${city}.`,
+          afternoon: `${city} Traditional Artisan Bazaar & Craft Guilds`,
+          descAft: `Wander through historic lanes lined with local master artisans, textiles, and spices.`,
+          evening: `${city} Riverfront / Central Promenade & Twilight Atmosphere`,
+          descEve: `Enjoy a relaxing twilight walk along the main public promenade with regional evening snacks.`,
         },
-      ],
-      afternoon: [
         {
-          time: '01:30 PM',
-          name: `${city} ${theme.afternoon}`,
-          description: `Immerse in the artisan heritage and scenic viewpoints of ${city}, featuring curated guided tours and local craftsmanship.`,
-          duration: '3.5 hours',
-          cost: Math.round(activitiesCost / (duration * 2)),
-          travelTime: '20 mins',
-          transportation: 'Electric Tramway',
-          coordinates: jitter(2),
+          title: `Natural Cascades, Valleys & Foothills Excursion`,
+          morning: `${city} Highland Valley & Nature Trail`,
+          descMorn: `Scenic morning walk through pine woods and lush ravines along the valley rim.`,
+          afternoon: `${city} Cascade Springs & Stream Vantage Point`,
+          descAft: `Visit refreshing natural water springs and picturesque riverbank vantage points.`,
+          evening: `${city} Scenic Sunset Hill & Panoramic Valley Vista`,
+          descEve: `Watch the sunset paint the distant ridgelines in golden amber hues.`,
         },
-      ],
-      evening: [
         {
-          time: '07:00 PM',
-          name: `${city} ${theme.evening}`,
-          description: `Wind down with authentic regional dining in atmospheric alleys and picturesque sunset overlooks.`,
-          duration: '2.5 hours',
-          cost: Math.round(food / (duration * 2)),
-          travelTime: '10 mins',
-          transportation: 'Leisurely Stroll',
-          coordinates: jitter(3),
+          title: `Spiritual Sanctuaries & Traditional Culinary Trail`,
+          morning: `${city} Ancient Monastery & Peaceful Forest Shrine`,
+          descMorn: `Early morning meditation and architectural exploration of historic mountain shrines.`,
+          afternoon: `${city} Regional Gastronomy & Food Tasting Walk`,
+          descAft: `Sample authentic regional delicacies and traditional specialties prepared with local mountain herbs.`,
+          evening: `${city} Lantern-Lit Evening Bazaar & Cultural Performances`,
+          descEve: `Soak in traditional folk music, evening devotional chants, and local night markets.`,
         },
-      ],
-      practicalAdvice: `Wear comfortable walking shoes. Pre-book express train tickets and carry a refillable water flask.`,
-    });
+        {
+          title: `Wilderness Escapes & Active Adventure Exploration`,
+          morning: `${city} Ridge Crest & Mountain Adventure Trail`,
+          descMorn: `Active morning exploration with panoramic vistas over surrounding ridges and forested cliffs.`,
+          afternoon: `${city} Traditional Kathkuni Stone Hamlet & Organic Orchards`,
+          descAft: `Visit nearby centuries-old rustic hamlets and sample fresh seasonal orchard produce.`,
+          evening: `${city} Campfire Dining & Traditional Village Storytelling`,
+          descEve: `Relax beside a cozy wood fire enjoying authentic home-cooked regional recipes.`,
+        },
+        {
+          title: `High Peak Horizons & Panoramic Photography Tour`,
+          morning: `${city} High Altitude Pass / Peak Lookout Point`,
+          descMorn: `Breathtaking high-altitude vistas overlooking the snow-capped horizon.`,
+          afternoon: `${city} Botanical Sanctuary & Cedar Forest Walk`,
+          descAft: `Tranquil forest stroll beneath towering deodar cedars with rich local biodiversity.`,
+          evening: `${city} Stargazing & Mountain Terrace Dinner`,
+          descEve: `Clear high-altitude mountain night skies and serene terrace dining.`,
+        },
+        {
+          title: `Riverfront Reflection, Local Crafts & Fond Farewell`,
+          morning: `${city} Peaceful Riverside Walk & Morning Reflection`,
+          descMorn: `Peaceful early morning stroll listening to the tranquil flow of the mountain river.`,
+          afternoon: `${city} Souvenirs, Handicrafts & Local Tea Tasting`,
+          descAft: `Pick up authentic handcrafted souvenirs, handloom woolens, and premium mountain teas.`,
+          evening: `${city} Farewell Dinner Featuring Heritage Recipes`,
+          descEve: `Celebrate the final evening of the journey with a royal multi-course traditional dinner.`,
+        },
+      ];
+
+      const themeSpec = DAY_THEMES[(i - 1) % DAY_THEMES.length];
+
+      days.push({
+        dayNumber: i,
+        date: dateStr,
+        title: `Day ${i}: ${themeSpec.title}`,
+        morning: [
+          {
+            time: '09:00 AM',
+            name: themeSpec.morning,
+            description: themeSpec.descMorn,
+            duration: '2.5 hours',
+            cost: morningCost,
+            travelTime: '20 mins',
+            transportation: transportMode,
+            coordinates: jitter(1),
+          },
+        ],
+        afternoon: [
+          {
+            time: '01:30 PM',
+            name: themeSpec.afternoon,
+            description: themeSpec.descAft,
+            duration: '3 hours',
+            cost: afternoonCost,
+            travelTime: '15 mins',
+            transportation: transportMode,
+            coordinates: jitter(2),
+          },
+        ],
+        evening: [
+          {
+            time: '06:30 PM',
+            name: themeSpec.evening,
+            description: themeSpec.descEve,
+            duration: '2 hours',
+            cost: 0,
+            travelTime: '10 mins',
+            transportation: 'Walk',
+            coordinates: jitter(3),
+          },
+        ],
+        practicalAdvice: profile?.isHillStation
+          ? 'Wear comfortable walking shoes with good grip. Carry layered warm clothing and confirm your return road transport in advance.'
+          : 'Wear comfortable walking shoes, stay hydrated, and use verified taxis or local transport.',
+      });
+    }
   }
 
-  // Hotels
+  // Format currency symbol for hotel price range
+  const nightlyRate = Math.round(accommodation / duration);
+  const minRate = Math.round(nightlyRate * 0.85);
+  const maxRate = Math.round(nightlyRate * 1.25);
+  const hotelPriceStr = `${sym}${minRate.toLocaleString()} - ${sym}${maxRate.toLocaleString()} / night`;
+
   const hotels = [
     {
-      name: `${city} Heritage Boutique Palace`,
-      location: `Central ${city} Historic District`,
-      category: 'Luxury / Heritage',
-      priceRange: `${currency} ${Math.round(accommodation / duration * 0.65)} / night`,
-      facilities: ['Wi-Fi 6', 'Onsen / Spa', 'Breakfast Included', 'Concierge Service'],
-      whyRecommended: `Exemplary hospitality blending traditional architecture with modern luxury, walking distance to primary attractions.`,
+      name: `${city} Grand Heritage Resort & Spa`,
+      location: `Central ${city}`,
+      category: 'Luxury Heritage',
+      priceRange: hotelPriceStr,
+      facilities: ['Free Wi-Fi', 'Mountain / River View', 'Central Heating / AC', 'Spa & Wellness'],
+      whyRecommended: `Strategic central location offering serene ambiance, trusted security, and panoramic vistas over ${city}.`,
+      bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(city)}`,
       verified: true,
-      coordinates: {
-        lat: Number((baseCoords.lat + 0.008).toFixed(4)),
-        lng: Number((baseCoords.lng - 0.005).toFixed(4)),
-      },
+      coordinates: baseCoords,
     },
     {
-      name: `${city} Modern Grand Suites`,
-      location: `${city} Central Station District`,
-      category: 'Premium Modern',
-      priceRange: `${currency} ${Math.round(accommodation / duration * 0.55)} / night`,
-      facilities: ['High-speed Fiber', 'Fitness Center', 'Panoramic Sky Lounge', 'Direct Metro Link'],
-      whyRecommended: `Unmatched transit convenience, executive suites, and stunning skyline views across ${city}.`,
-      verified: true,
-      coordinates: {
-        lat: Number((baseCoords.lat - 0.012).toFixed(4)),
-        lng: Number((baseCoords.lng + 0.008).toFixed(4)),
-      },
+      name: `${city} Riverside Boutique Retreat`,
+      location: `Scenic Valley, ${city}`,
+      category: 'Boutique Comfort',
+      priceRange: hotelPriceStr,
+      facilities: ['Organic Dining', 'River Access', 'Balcony Views', 'Travel Concierge'],
+      whyRecommended: `Peaceful nature retreat close to primary regional routes with authentic hospitality.`,
+      bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(city)}`,
+      verified: false,
+      coordinates: jitter(4),
     },
   ];
 
-  // Restaurants
   const restaurants = [
     {
-      name: `${city} Traditional Gastronomy Atelier`,
-      cuisine: 'Authentic Regional & Seasonal',
-      estimatedCost: Math.round(food / (duration * 3)),
-      dietarySuitability: ['Vegetarian Options', 'Organic', 'Gluten-conscious'],
+      name: `${city} Traditional Heritage Kitchen`,
+      cuisine: profile?.authenticCuisines?.[0] ? 'Traditional Regional Cuisine' : 'Authentic Indian Cuisine',
+      estimatedCost: currency === 'INR' ? 450 : 25,
+      dietarySuitability: ['Vegetarian Options', 'Organic Farm Ingredients', 'Regional Specialties'],
       location: `Old Quarter, ${city}`,
+      mustTry: profile?.authenticCuisines?.[0] || 'Signature Local Thali',
+      whyRecommended: `Revered by locals and visitors alike for centuries-old recipes prepared with fresh regional produce.`,
       verified: true,
-      coordinates: {
-        lat: Number((baseCoords.lat + 0.005).toFixed(4)),
-        lng: Number((baseCoords.lng + 0.004).toFixed(4)),
-      },
+      coordinates: jitter(5),
     },
     {
-      name: `The ${city} Riverside Tasting Room`,
-      cuisine: 'Modern Fusion & Wine Pairing',
-      estimatedCost: Math.round(food / (duration * 2.5)),
-      dietarySuitability: ['Seafood', 'Chef Tasting Menu', 'Halal-friendly'],
-      location: `Waterfront Promenade, ${city}`,
-      verified: true,
-      coordinates: {
-        lat: Number((baseCoords.lat - 0.006).toFixed(4)),
-        lng: Number((baseCoords.lng - 0.007).toFixed(4)),
-      },
+      name: `${city} Mountain Riverfront Cafe`,
+      cuisine: 'Artisan Bakery & Pahadi Tea Lounge',
+      estimatedCost: currency === 'INR' ? 350 : 18,
+      dietarySuitability: ['Vegetarian', 'Vegan Friendly', 'Herbal Teas'],
+      location: `River Promenade, ${city}`,
+      mustTry: profile?.authenticCuisines?.[1] || 'Fresh Mountain Herbal Teas & Baked Treats',
+      whyRecommended: `Charming riverside setting providing organic mountain teas and relaxed garden seating.`,
+      verified: false,
+      coordinates: jitter(6),
     },
   ];
+
+  // Activities signature summary
+  const activities = (regionalDiscovery?.places?.slice(0, 4) || []).map((p) => ({
+    name: p.name,
+    description: p.description,
+    location: `${p.hub}, ~${p.distanceKm} km from center`,
+    category: p.category,
+    estimatedDuration: '2.5 - 3 hours',
+    estimatedCost: currency === 'INR' ? 350 : 20,
+    currency,
+    bestTime: p.bestTime || 'Morning',
+    transportMode: transportMode,
+  }));
 
   return {
     overview: {
-      destination: `${city}, ${country}`,
+      destination: city,
       duration: `${duration} Days`,
-      travelDates: `${days[0]?.date || 'Upcoming'} to ${days[days.length - 1]?.date || 'Upcoming'}`,
-      travelStyle: trip.preferences.accommodation || 'Curated Exploration',
-      destinationIntroduction: `${city} is one of ${country}'s most captivating destinations, seamlessly harmonizing centuries of living heritage with vibrant contemporary culinary culture, scenic gardens, and world-class hospitality.`,
-      recommendedTravelSeason: 'Spring (Cherry Blossoms / Mild) & Autumn (Foliage)',
+      travelDates: `${startDate.toISOString().split('T')[0]} to ${
+        new Date(startDate.getTime() + (duration - 1) * 86400000).toISOString().split('T')[0]
+      }`,
+      travelStyle: trip.preferences?.accommodation || 'Comfort',
+      destinationIntroduction: `Set against the captivating landscapes of ${country}, ${city} and its surrounding regional radius of 70 km offer a rich tapestry of sacred rivers, historic sanctuaries, and dramatic mountain panoramas. This day-wise journey seamlessly connects local landmarks with discovered regional gems.`,
+      recommendedTravelSeason: 'Spring to Autumn for ideal sightseeing and outdoor exploration.',
       estimatedTotalBudget: totalBudget,
     },
     days,
     hotels,
     restaurants,
-    activities: [
-      `Scenic heritage walk in historical ${city}`,
-      `Authentic regional cuisine masterclass`,
-      `Sunset architectural photography expedition`,
-      `Curated artisan market and craft workshop tour`,
-    ],
+    activities,
     budgetBreakdown: {
       accommodation,
       food,
@@ -191,27 +358,33 @@ export function buildCuratedFallbackItinerary(trip: ITripDocument): GeminiItiner
       total: totalBudget,
     },
     safetyTips: [
-      `Emergency services dial number: 110 (Police), 119 (Ambulance).`,
-      `Always keep digital and printed photocopies of your passport and medical insurance.`,
-      `Tap water in ${city} is tested to the highest safety and potable standards.`,
+      `Keep verified emergency numbers and your accommodation card readily accessible.`,
+      `Carry sufficient cash for remote vendor kiosks, high-altitude passes, and rural temple entry tickets.`,
+      profile?.isHillStation
+        ? `Mountain roads can have sudden weather fluctuations; confirm road conditions each morning with your driver.`
+        : `Stay hydrated, use metered taxis or rideshares, and keep your valuables secure in crowded bazaars.`,
     ],
     thingsToAvoid: [
-      `Avoid taking unmarked taxis; utilize official city taxi stands or ride apps.`,
-      `Avoid walking and eating in sacred temple sanctuaries.`,
-      `Do not leave cash tips where service charges are already built into the invoice.`,
+      `Avoid unmetered or unlicensed roadside transport offers; use registered cabs or state transport.`,
+      `Do not attempt remote jungle hikes or river rapids without certified local guides.`,
     ],
     packingChecklist: {
-      clothing: ['Breathable layers', 'Lightweight waterproof jacket', 'Sturdy walking shoes', 'Smart-casual dining wear'],
-      documents: ['Passport (valid 6+ mos)', 'Flight e-tickets', 'Accommodation vouchers', 'Travel insurance card'],
-      electronics: ['Universal travel adapter', 'High-capacity power bank', 'Compact camera', 'Noise-cancelling earphones'],
-      personalEssentials: ['Daily prescription meds', 'Sunscreen SPF 50+', 'Lip balm', 'Hand sanitizing wipes'],
-      destinationSpecific: ['Local transport smart card', 'Comfortable slip-on shoes for temple entry', 'Pocket Wi-Fi unit'],
+      clothing: [
+        'Comfortable walking shoes with slip-resistant soles',
+        profile?.isHillStation ? 'Layered fleece, windproof jacket, and thermal innerwear' : 'Light cottons and sun hats',
+        'Modest clothing covering shoulders and knees for temple visits',
+      ],
+      documents: ['Government ID/Passport copies', 'Hotel booking vouchers', 'Physical cash in local currency'],
+      electronics: ['Power bank (10,000mAh+)', 'Camera with extra memory card', 'Universal travel adapter'],
+      personalEssentials: ['Broad-spectrum sunscreen', 'Lip balm & moisturizer', 'Personal prescription medications'],
+      destinationSpecific: [
+        profile?.isHillStation ? 'Sturdy umbrella or rain poncho' : 'Insect repellent and reusable water bottle',
+      ],
     },
     travelTips: [
-      `Purchase a reloadable transit smart card upon arrival at the central station for seamless metro and bus transfers.`,
-      `Visit major shrines before 08:30 AM to capture stunning photographs with minimal crowds.`,
-      `Reserve top-rated dining spots at least 1 week in advance.`,
+      'UPI digital payments are widely accepted across most vendors; carry small cash for ghat offerings.',
+      'Remove footwear and cover your head when entering sacred temple sanctums.',
+      'Support local communities by purchasing handicrafts directly from regional artisan co-operatives.',
     ],
   };
 }
-

@@ -8,6 +8,7 @@ export interface ITripDocument extends Document {
     country: string;
     city?: string;
     region?: string;
+    coordinates?: { lat: number; lng: number };
   };
   startingLocation: string;
   dates: {
@@ -45,6 +46,10 @@ const destinationSchema = new Schema(
     country: { type: String, required: true, trim: true },
     city: { type: String, trim: true },
     region: { type: String, trim: true },
+    coordinates: {
+      lat: { type: Number },
+      lng: { type: Number },
+    },
   },
   { _id: false }
 );

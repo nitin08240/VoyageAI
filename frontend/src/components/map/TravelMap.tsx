@@ -21,13 +21,15 @@ const createCustomMarkerIcon = (
   if (category === 'activity') bgColor = '#10b981'; // emerald
   if (category === 'destination') bgColor = '#6366f1'; // indigo
 
-  const size = isSelected ? 36 : 28;
-  const pulseClass = isSelected ? 'ring-4 ring-accent-400 ring-offset-2 ring-offset-navy-950 scale-110' : '';
+  const size = isSelected ? 38 : 28;
+  const pulseStyle = isSelected
+    ? 'box-shadow: 0 0 0 4px #f97316, 0 0 20px rgba(249, 115, 22, 0.85);'
+    : 'box-shadow: 0 4px 14px rgba(0,0,0,0.6);';
 
   return L.divIcon({
-    className: 'voyage-custom-pin',
+    className: `voyage-custom-pin ${isSelected ? 'voyage-pin-selected' : ''}`,
     html: `
-      <div style="background-color: ${bgColor}; width: ${size}px; height: ${size}px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.6); border: 2.5px solid white;" class="transition-transform duration-200 ${pulseClass}">
+      <div style="background-color: ${bgColor}; width: ${size}px; height: ${size}px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; ${pulseStyle} border: 2.5px solid white; transition: all 0.3s ease;">
         <span style="transform: rotate(45deg); color: white; font-size: ${isSelected ? '12px' : '10px'}; font-weight: 800; font-family: sans-serif;">${label}</span>
       </div>
     `,
@@ -37,22 +39,43 @@ const createCustomMarkerIcon = (
   });
 };
 
-// Map controller for auto-fitting bounds and panning to selected location
-function MapBoundsController({
+// Haversine distance calculator to filter out invalid / distant coordinates
+const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+// Map controller for auto-fitting bounds and smooth flyTo on selected location
+function MapViewController({
   locations,
   selectedLocation,
   triggerFit,
+  markerRefs,
 }: {
   locations: MapLocation[];
   selectedLocation?: MapLocation | null;
   triggerFit: number;
+  markerRefs: React.MutableRefObject<Map<string, L.Marker>>;
 }) {
   const map = useMap();
+  const hasFittedRef = React.useRef(false);
 
   // Fit bounds when markers change or "Fit All" is clicked
   useEffect(() => {
+    if (!triggerFit && hasFittedRef.current) return;
+    hasFittedRef.current = true;
+
     const validCoords = locations
-      .filter((loc) => loc.coordinates)
+      .filter((loc) => loc.coordinates && Number.isFinite(loc.coordinates.lat) && Number.isFinite(loc.coordinates.lng))
       .map((loc) => [loc.coordinates!.lat, loc.coordinates!.lng] as [number, number]);
 
     if (validCoords.length > 0) {
@@ -61,14 +84,23 @@ function MapBoundsController({
     }
   }, [locations, triggerFit, map]);
 
-  // Center on selected location if available
+  // Smooth flyTo and auto-open popup on selected location
   useEffect(() => {
     if (selectedLocation?.coordinates) {
-      map.setView([selectedLocation.coordinates.lat, selectedLocation.coordinates.lng], 15, {
-        animate: true,
-      });
+      const { lat, lng } = selectedLocation.coordinates;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        map.flyTo([lat, lng], 16, { duration: 1.5 });
+
+        // Auto-open marker popup
+        const marker = markerRefs.current.get(selectedLocation.locationId);
+        if (marker) {
+          setTimeout(() => {
+            marker.openPopup();
+          }, 400);
+        }
+      }
     }
-  }, [selectedLocation, map]);
+  }, [selectedLocation, map, markerRefs]);
 
   return null;
 }
@@ -206,14 +238,63 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     });
   }, [allLocations, selectedCategory, selectedDay]);
 
-  const locationsWithCoords = useMemo(() => {
-    return filteredLocations.filter((loc) => loc.coordinates);
-  }, [filteredLocations]);
+  // Destination center anchor for sanity-checking coordinates
+  const destCenter = useMemo(() => {
+    if (itinerary?.destinationCoordinates?.lat && itinerary?.destinationCoordinates?.lng) {
+      return itinerary.destinationCoordinates;
+    }
+    if (itinerary?.destination?.coordinates?.lat && itinerary?.destination?.coordinates?.lng) {
+      return itinerary.destination.coordinates;
+    }
+    return null;
+  }, [itinerary]);
 
+  // Marker references for programmatic flyTo and openPopup
+  const markerRefs = React.useRef<Map<string, L.Marker>>(new Map());
+
+  // Filter locations with valid coordinates and distance check against destination center
+  const locationsWithCoords = useMemo(() => {
+    return filteredLocations.filter((loc) => {
+      if (!loc.coordinates || !Number.isFinite(loc.coordinates.lat) || !Number.isFinite(loc.coordinates.lng)) {
+        return false;
+      }
+      // If we have an authoritative destination anchor, reject any coordinates > 150km away (e.g. stale Kyoto hallucinations)
+      if (destCenter && Number.isFinite(destCenter.lat) && Number.isFinite(destCenter.lng)) {
+        const dist = calculateDistanceKm(
+          destCenter.lat,
+          destCenter.lng,
+          loc.coordinates.lat,
+          loc.coordinates.lng
+        );
+        if (dist > 150) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [filteredLocations, destCenter]);
+
+  // Robust selected location matching by id or name
   const selectedLocation = useMemo(() => {
     if (!selectedLocationId) return null;
-    return allLocations.find((loc) => loc.locationId === selectedLocationId || loc.name === selectedLocationId);
+    const target = selectedLocationId.trim().toLowerCase();
+    return (
+      allLocations.find(
+        (loc) =>
+          loc.locationId.toLowerCase() === target ||
+          loc.name.toLowerCase() === target ||
+          loc.name.toLowerCase().includes(target) ||
+          target.includes(loc.name.toLowerCase())
+      ) || null
+    );
   }, [allLocations, selectedLocationId]);
+
+  // Auto-synchronize Day filter when a day-specific activity or attraction is selected
+  useEffect(() => {
+    if (selectedLocation?.dayNumber && selectedDay !== selectedLocation.dayNumber) {
+      setSelectedDay(selectedLocation.dayNumber);
+    }
+  }, [selectedLocation, selectedDay]);
 
   const totalDays = itinerary?.days?.length || 0;
   const destTitle = destinationName || destination || itinerary?.overview?.destination || itinerary?.destination || 'Your Destination';
@@ -236,7 +317,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   };
 
   // If absolutely no locations have coordinates yet
-  if (locationsWithCoords.length === 0) {
+  if (locationsWithCoords.length === 0 && !destCenter) {
     return (
       <div className="w-full h-96 rounded-3xl glass-card border border-white/10 p-8 flex flex-col items-center justify-center text-center">
         <div className="w-16 h-16 rounded-full bg-accent-500/10 border border-accent-500/20 text-accent-400 flex items-center justify-center mb-4">
@@ -269,10 +350,13 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     );
   }
 
-  const defaultCenter: [number, number] = [
-    locationsWithCoords[0].coordinates!.lat,
-    locationsWithCoords[0].coordinates!.lng,
-  ];
+  const defaultCenter: [number, number] = selectedLocation?.coordinates
+    ? [selectedLocation.coordinates.lat, selectedLocation.coordinates.lng]
+    : locationsWithCoords.length > 0
+    ? [locationsWithCoords[0].coordinates!.lat, locationsWithCoords[0].coordinates!.lng]
+    : destCenter
+    ? [destCenter.lat, destCenter.lng]
+    : [32.24546, 77.18729]; // Safe neutral fallback
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -306,11 +390,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             maxZoom={19}
           />
 
-          {/* Bounds & Center Controller */}
-          <MapBoundsController
+          {/* Bounds, FlyTo & Center Controller */}
+          <MapViewController
             locations={locationsWithCoords}
             selectedLocation={selectedLocation}
             triggerFit={fitTrigger}
+            markerRefs={markerRefs}
           />
 
           {/* OSRM Daily Road Route Polyline Layer */}
@@ -322,7 +407,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
           {/* Render Location Markers */}
           {locationsWithCoords.map((item) => {
-            const isSelected = selectedLocation?.locationId === item.locationId;
+            const isSelected =
+              selectedLocation?.locationId === item.locationId ||
+              selectedLocation?.name.toLowerCase() === item.name.toLowerCase();
+
             let label = 'A';
             if (item.category === 'hotel') label = 'H';
             if (item.category === 'restaurant') label = 'R';
@@ -335,6 +423,19 @@ export const TravelMap: React.FC<TravelMapProps> = ({
                 key={item.locationId}
                 position={[item.coordinates!.lat, item.coordinates!.lng]}
                 icon={icon}
+                ref={(node) => {
+                  if (node) {
+                    markerRefs.current.set(item.locationId, node);
+                    if (item.name) {
+                      markerRefs.current.set(item.name.toLowerCase(), node);
+                    }
+                  } else {
+                    markerRefs.current.delete(item.locationId);
+                    if (item.name) {
+                      markerRefs.current.delete(item.name.toLowerCase());
+                    }
+                  }
+                }}
                 eventHandlers={{
                   click: () => {
                     onLocationSelect?.(item.locationId);

@@ -1,12 +1,13 @@
 import React from 'react';
-import { Utensils, MapPin, DollarSign, ShieldCheck } from 'lucide-react';
+import { Utensils, MapPin, ShieldCheck, Compass, Sparkles } from 'lucide-react';
 import { IRestaurant } from '@/types/itinerary.types';
 
 interface RestaurantCardProps {
   restaurant: IRestaurant;
+  onViewOnMap?: (restaurantName: string) => void;
 }
 
-export const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) => {
+export const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant, onViewOnMap }) => {
   return (
     <div className="rounded-2xl glass-card border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between h-full overflow-hidden">
       {/* Restaurant Photo if available */}
@@ -34,10 +35,15 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) =>
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20">
             {restaurant.cuisine || 'Local Cuisine'}
           </span>
-          <div className="flex items-center gap-1 font-bold text-sm text-emerald-400">
-            <DollarSign className="w-4 h-4" />
-            <span>{restaurant.costEstimate || '$$'}</span>
-          </div>
+          {restaurant.verified ? (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <ShieldCheck className="w-3 h-3" /> Verified
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-amber-300/80 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+              <Sparkles className="w-3 h-3 text-amber-400" /> AI Recommendation
+            </span>
+          )}
         </div>
 
         <h4 className="text-lg font-serif font-bold text-white mb-1.5 flex items-center gap-2">
@@ -73,22 +79,30 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) =>
       </div>
 
       <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-        {restaurant.verified ? (
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-            <ShieldCheck className="w-3.5 h-3.5" /> Verified Establishment
-          </span>
-        ) : (
-          <span className="text-[10px] text-slate-500">AI Recommendation</span>
-        )}
+        <span className="text-[10px] text-slate-400">
+          {restaurant.timing || (restaurant.verified ? 'Verified Spot' : 'AI Handpicked')}
+        </span>
 
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ' ' + restaurant.location)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-accent-400 hover:underline font-semibold"
-        >
-          View on Map &rarr;
-        </a>
+        <div className="flex items-center gap-3">
+          {onViewOnMap ? (
+            <button
+              type="button"
+              onClick={() => onViewOnMap(restaurant.name)}
+              className="text-xs text-accent-400 hover:text-accent-300 font-semibold flex items-center gap-1 transition-colors"
+            >
+              <Compass className="w-3.5 h-3.5" /> View on Map
+            </button>
+          ) : (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ' ' + restaurant.location)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent-400 hover:underline font-semibold"
+            >
+              View on Map &rarr;
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

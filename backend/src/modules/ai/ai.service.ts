@@ -13,6 +13,8 @@ import { buildCuratedFallbackItinerary } from './ai.fallback';
 import { geocodingService } from '../../services/geocoding.service';
 import { unsplashService } from '../../services/unsplash.service';
 import { weatherService } from '../../services/weather.service';
+import { qualityControlService } from '../../services/qualityControl.service';
+import { nearbyDiscoveryService } from '../../services/nearbyDiscovery.service';
 
 const genAI = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
@@ -36,8 +38,16 @@ export async function generateItinerary(
     const trip = await Trip.findById(tripId);
     if (!trip) throw new AIServiceError('Trip not found.');
 
-    // Build prompt
-    const prompt = buildItineraryPrompt(trip.toJSON() as any);
+    // Discover authentic nearby attractions within 70 km radius
+    const destCity = trip.destination?.city || trip.destination?.name || 'Destination';
+    const regionalDiscovery = await nearbyDiscoveryService.discoverNearbyAttractions(
+      destCity,
+      70,
+      trip.duration || 3
+    );
+
+    // Build prompt with regional discovery context
+    const prompt = buildItineraryPrompt(trip.toJSON() as any, regionalDiscovery);
 
     let validatedData: GeminiItineraryResponse;
 
@@ -91,8 +101,12 @@ export async function generateItinerary(
       validatedData = validationResult.data;
     } catch (aiErr: any) {
       console.warn(`[AI Service] Live Gemini API notice (${aiErr.message?.slice(0, 100)}). Activating curated intelligent synthesis fallback.`);
-      validatedData = buildCuratedFallbackItinerary(trip);
+      validatedData = buildCuratedFallbackItinerary(trip, regionalDiscovery);
     }
+
+    // Apply strict destination intelligence, regional discovery, and quality control
+    const { data: qcData, warnings } = qualityControlService.sanitizeAndValidate(validatedData, trip, regionalDiscovery);
+    validatedData = qcData;
 
     // Server-side budget recalculation and validation
     const recalcTotal = recalculateTotals(validatedData.budgetBreakdown);
@@ -137,14 +151,26 @@ export async function generateItinerary(
       hotels: validatedData.hotels,
       restaurants: validatedData.restaurants.map(r => ({
         ...r,
-        estimatedCost: String(r.estimatedCost ?? 20),
+        estimatedCost: String(r.estimatedCost ?? 0),
       })),
-      activities: validatedData.activities.map((a, idx) => ({
-        time: 'Daytime',
-        name: typeof a === 'string' ? a : (a as any).name || `Activity ${idx + 1}`,
-        description: typeof a === 'string' ? a : (a as any).description || 'Curated sightseeing activity',
-        duration: '2 hours',
-        cost: '0',
+      activities: validatedData.activities.map((a: any, idx: number) => ({
+        time: a.bestTime || 'Daytime',
+        name: typeof a === 'string' ? a : a.name || `Signature Experience ${idx + 1}`,
+        description: typeof a === 'string' ? a : a.description || 'Authentic destination attraction',
+        duration: typeof a === 'object' && a.estimatedDuration ? String(a.estimatedDuration) : '2.5 hours',
+        cost: typeof a === 'object' && a.estimatedCost !== undefined ? String(a.estimatedCost) : '0',
+        transportation: typeof a === 'object' && a.transportMode ? a.transportMode : 'Walk',
+        location: typeof a === 'object' && a.location ? a.location : undefined,
+      })),
+      nearbyDiscoveredPlaces: (regionalDiscovery?.places || []).map((p) => ({
+        placeId: p.placeId,
+        name: p.name,
+        category: p.category,
+        lat: p.lat,
+        lng: p.lng,
+        distanceKm: p.distanceKm,
+        estimatedTravelMinutes: p.estimatedTravelMinutes,
+        hub: p.hub,
       })),
       budgetBreakdown: validatedData.budgetBreakdown,
       safetyTips: validatedData.safetyTips,
@@ -157,7 +183,10 @@ export async function generateItinerary(
         promptVersion: '1.0',
         validatedAt: new Date(),
         budgetConsistent: budgetCheck.valid,
-        warningFlags: budgetCheck.valid ? [] : [budgetCheck.message || 'Budget exceeded'],
+        warningFlags: [
+          ...(budgetCheck.valid ? [] : [budgetCheck.message || 'Budget exceeded']),
+          ...warnings,
+        ],
       },
       generatedAt: new Date(),
     });
@@ -192,14 +221,18 @@ export async function generateItinerary(
   } catch (error: any) {
     console.error('[AI Service Error]:', error);
     // Update job on failure
-    job.status = 'failed';
-    job.errorMessage = error.message || 'Unknown error';
-    job.errorCode = error.code || 'GENERATION_FAILED';
-    job.completedAt = new Date();
-    await job.save();
+    try {
+      job.status = 'failed';
+      job.errorMessage = error.message || 'Unknown error';
+      job.errorCode = error.code || 'GENERATION_FAILED';
+      job.completedAt = new Date();
+      await job.save();
 
-    // Update trip status
-    await Trip.findByIdAndUpdate(tripId, { status: 'failed' });
+      // Update trip status
+      await Trip.findByIdAndUpdate(tripId, { status: 'failed' });
+    } catch (saveErr: any) {
+      console.warn('[AI Service] Notice saving failure state:', saveErr.message);
+    }
 
     throw error instanceof AIServiceError
       ? error
