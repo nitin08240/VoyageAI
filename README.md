@@ -291,14 +291,15 @@ cd voyage-ai
 ### 2. Configure Backend Environment
 Edit `backend/.env`:
 ```env
-PORT=5001
+PORT=5005
 NODE_ENV=development
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.rdzasec.mongodb.net/voyageai?retryWrites=true&w=majority
-JWT_SECRET=voyageai_super_secret_jwt_key_2024_production_ready_32chars
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.your-cluster.mongodb.net/voyageai?retryWrites=true&w=majority
+# Generate with: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+JWT_SECRET=your_generated_cryptographically_secure_jwt_secret_here
 JWT_EXPIRES_IN=7d
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3.8-flash
-CLIENT_URL=http://localhost:5173
+GEMINI_MODEL=gemini-3.7-flash
+CLIENT_URL=http://localhost:3000
 COOKIE_DOMAIN=localhost
 ```
 
@@ -353,18 +354,18 @@ npm run build
 ### Deployment Guidelines:
 * **Frontend**: Deploy `frontend/dist` to **Vercel** or **Cloudflare Pages**. Set `VITE_API_URL` to your production backend domain.
 * **Backend**: Deploy `backend` to **Render**, **Railway**, or **AWS ECS**. Provide the environment variables listed in `backend/.env`.
-* **Database**: MongoDB Atlas with Network Access configured (whitelist production server IP or `0.0.0.0/0`).
+* **Database**: MongoDB Atlas with Network Access configured (restrict strictly to your production server outbound IP addresses or VPC peering; never use `0.0.0.0/0` in production).
 
 ---
 
 ## ❓ Troubleshooting & FAQs
 
 * **MongoDB Atlas Connection Timeout / EACCES**:
-  Ensure your current public IP address is whitelisted in MongoDB Atlas under **Network Access** > **Add IP Address** (or select `Allow Access From Anywhere: 0.0.0.0/0` during development).
+  Ensure your current public IP address is whitelisted in MongoDB Atlas under **Network Access** > **Add IP Address** (whitelist only authorized outbound IP addresses).
 * **Gemini API Model Deprecation**:
-  If using an existing key, the backend defaults to `gemini-3.8-flash`. You can configure any available Gemini model in `backend/.env` under `GEMINI_MODEL`.
-* **CORS Credentials in Browser**:
-  Verify that `CLIENT_URL` in `backend/.env` exactly matches your frontend URL (including protocol and port, e.g. `http://localhost:5173`).
+  The backend defaults to `gemini-3.7-flash` (or `gemini-3.8-flash`). You can configure any available Gemini model in `backend/.env` under `GEMINI_MODEL`.
+* **CORS & Authentication in Browser**:
+  Ensure `CLIENT_URL` in `backend/.env` exactly matches your frontend URL (including protocol and port). Session authentication is strictly cookie-based (`voyage_token` in `HttpOnly`, `SameSite=None`, `Secure` in production), fortified with CSRF tokens on all mutation requests (`POST`, `PUT`, `PATCH`, `DELETE`).
 
 ---
 

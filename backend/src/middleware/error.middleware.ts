@@ -40,6 +40,12 @@ export function globalErrorHandler(
     return;
   }
 
+  // ── CORS Errors ─────────────────────────────────────────────────────────────
+  if (err instanceof Error && err.message.startsWith('Not allowed by CORS')) {
+    sendError(res, err.message, 403);
+    return;
+  }
+
   // ── Zod Validation Errors ───────────────────────────────────────────────────
   if (err instanceof ZodError) {
     sendError(

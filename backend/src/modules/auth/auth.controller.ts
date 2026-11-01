@@ -4,6 +4,7 @@ import { setCookieToken, clearCookieToken } from '../../utils/token';
 import { sendSuccess } from '../../shared/response';
 import { AuthenticatedRequest } from '../../shared/types';
 import { emailService } from '../../services/email.service';
+import { AppError } from '../../shared/errors';
 
 /**
  * POST /api/v1/auth/register
@@ -90,7 +91,14 @@ export async function forgotPassword(
     const { token, userName } = await authService.forgotPassword(email);
 
     if (token) {
-      await emailService.sendPasswordResetEmail(email, userName, token);
+      const delivered = await emailService.sendPasswordResetEmail(email, userName, token);
+      if (!delivered) {
+        // Invalidate token immediately if delivery failed
+        await authService.clearResetToken(email);
+        if (process.env.NODE_ENV === 'production' && !emailService.isConfigured()) {
+          throw new AppError('Email service is currently unavailable. Please try again later.', 503);
+        }
+      }
     }
 
     sendSuccess(

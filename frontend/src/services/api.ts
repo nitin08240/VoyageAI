@@ -2,6 +2,23 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse 
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
+let cachedCsrfToken: string | null = null;
+let csrfPromise: Promise<string> | null = null;
+
+export async function fetchCsrfToken(): Promise<string> {
+  if (csrfPromise) return csrfPromise;
+  csrfPromise = axios
+    .get(`${BASE_URL}/auth/csrf-token`, { withCredentials: true })
+    .then(res => {
+      cachedCsrfToken = res.data?.data?.csrfToken || res.data?.csrfToken || '';
+      return cachedCsrfToken!;
+    })
+    .finally(() => {
+      csrfPromise = null;
+    });
+  return csrfPromise;
+}
+
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
@@ -13,8 +30,33 @@ const api: AxiosInstance = axios.create({
 
 /* ─── Request Interceptor ───────────────────────────────────── */
 api.interceptors.request.use(
-  config => {
+  async config => {
     config.headers['Content-Type'] = config.headers['Content-Type'] || 'application/json';
+
+    const method = config.method?.toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method || '')) {
+      const url = config.url || '';
+      const isExempt =
+        url.includes('/auth/login') ||
+        url.includes('/auth/register') ||
+        url.includes('/auth/forgot-password') ||
+        url.includes('/auth/reset-password') ||
+        url.includes('/auth/csrf-token');
+
+      if (!isExempt) {
+        if (!cachedCsrfToken) {
+          try {
+            await fetchCsrfToken();
+          } catch {
+            // Server will validate
+          }
+        }
+        if (cachedCsrfToken) {
+          config.headers['X-CSRF-Token'] = cachedCsrfToken;
+        }
+      }
+    }
+
     return config;
   },
   error => Promise.reject(error)
@@ -26,6 +68,10 @@ api.interceptors.response.use(
   error => {
     const url = error.config?.url || '';
     const isAuthCheck = url.includes('/auth/me') || url.includes('/auth/login') || url.includes('/auth/register');
+
+    if (error.response?.status === 403 && typeof error.response?.data?.message === 'string' && error.response.data.message.includes('CSRF')) {
+      cachedCsrfToken = null;
+    }
 
     if (error.response?.status === 401 && !isAuthCheck) {
       // Clear any stored auth state

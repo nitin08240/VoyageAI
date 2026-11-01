@@ -15,6 +15,7 @@ export interface IUserDocument extends Document {
   // Password reset fields
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  tokenVersion: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +86,10 @@ const userSchema = new Schema<IUserDocument>(
     passwordResetExpires: {
       type: Date,
       select: false,
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
     },
   },
   {

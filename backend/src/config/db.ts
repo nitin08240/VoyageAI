@@ -43,11 +43,11 @@ export async function connectDB(): Promise<void> {
     await mongoose.connect(env.MONGODB_URI, MONGOOSE_OPTIONS);
   } catch (err) {
     console.error('❌ Initial MongoDB connection failed:', (err as Error).message);
-    console.warn('⚠️  Note: If using MongoDB Atlas, please ensure your IP address is whitelisted in Atlas Network Access (e.g. 0.0.0.0/0 for testing).');
     if (env.NODE_ENV === 'production') {
       console.error('❌ Cannot start in production without database. Exiting.');
       process.exit(1);
     }
+    throw err;
   }
 }
 

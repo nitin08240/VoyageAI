@@ -26,6 +26,17 @@ class EmailService {
     return this.transporter !== null;
   }
 
+  public async verifyConnection(): Promise<boolean> {
+    if (!this.transporter) return false;
+    try {
+      await this.transporter.verify();
+      return true;
+    } catch (err) {
+      console.error('[EmailService] SMTP verification failed:', (err as Error).message);
+      return false;
+    }
+  }
+
   public async sendPasswordResetEmail(
     to: string,
     userName: string,

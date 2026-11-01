@@ -3,31 +3,43 @@ import { verifyToken } from '../utils/token';
 import { AuthError } from '../shared/errors';
 import { COOKIE_NAME } from '../config/constants';
 import { AuthenticatedRequest } from '../shared/types';
+import { User } from '../models/User.model';
 
 /**
- * Strict authentication middleware.
+ * Strict cookie-only authentication middleware.
  * Throws AuthError if no valid JWT cookie is present.
+ * Bearer token fallback is explicitly rejected for security.
  */
-export function authenticate(
+export async function authenticate(
   req: Request,
   _res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
-    let token = req.cookies?.[COOKIE_NAME];
-
-    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
+    const token = req.cookies?.[COOKIE_NAME];
 
     if (!token) {
       throw new AuthError('No authentication token provided. Please log in.');
     }
 
-    const decoded = verifyToken(token) as { id: string; email: string; iat: number; exp: number };
+    const decoded = verifyToken(token) as {
+      id: string;
+      email: string;
+      tokenVersion?: number;
+      iat: number;
+      exp: number;
+    };
 
     if (!decoded?.id || !decoded?.email) {
       throw new AuthError('Invalid authentication token payload.');
+    }
+
+    // Verify session validity against database tokenVersion if set
+    if (typeof decoded.tokenVersion === 'number') {
+      const userDoc = await User.findById(decoded.id).select('tokenVersion');
+      if (!userDoc || (userDoc.tokenVersion || 0) !== decoded.tokenVersion) {
+        throw new AuthError('Session has expired due to a credential change. Please log in again.');
+      }
     }
 
     (req as AuthenticatedRequest).user = {
@@ -43,28 +55,35 @@ export function authenticate(
 
 /**
  * Optional authentication middleware.
- * Attaches user to request if a valid JWT cookie or Bearer token exists.
- * Does NOT throw if missing or invalid — just calls next().
+ * Attaches user to request if a valid JWT cookie exists.
+ * Does NOT accept Bearer tokens; does NOT throw if cookie is absent.
  */
-export function optionalAuthenticate(
+export async function optionalAuthenticate(
   req: Request,
   _res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
-    let token = req.cookies?.[COOKIE_NAME];
-
-    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
+    const token = req.cookies?.[COOKIE_NAME];
 
     if (!token) {
       return next();
     }
 
-    const decoded = verifyToken(token) as { id: string; email: string };
+    const decoded = verifyToken(token) as {
+      id: string;
+      email: string;
+      tokenVersion?: number;
+    };
 
     if (decoded?.id && decoded?.email) {
+      if (typeof decoded.tokenVersion === 'number') {
+        const userDoc = await User.findById(decoded.id).select('tokenVersion');
+        if (!userDoc || (userDoc.tokenVersion || 0) !== decoded.tokenVersion) {
+          return next();
+        }
+      }
+
       (req as AuthenticatedRequest).user = {
         id: decoded.id,
         email: decoded.email,

@@ -9,7 +9,10 @@ const PORT = parseInt(env.PORT, 10) || 5000;
 
 async function startServer(): Promise<void> {
   try {
-    // Start Express server
+    // 1. Connect to MongoDB before accepting incoming traffic
+    await connectDB();
+
+    // 2. Start Express HTTP server only after database is ready
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`
 ╔══════════════════════════════════════════════════╗
@@ -23,11 +26,11 @@ async function startServer(): Promise<void> {
       `);
     });
 
-    // Connect to MongoDB asynchronously
-    await connectDB();
-
     // Graceful shutdown
+    let isShuttingDown = false;
     const shutdown = async (signal: string) => {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
       console.log(`\n⚡ ${signal} received. Shutting down gracefully...`);
 
       server.close(async () => {

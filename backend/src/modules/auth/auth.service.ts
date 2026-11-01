@@ -28,7 +28,7 @@ export async function register(data: RegisterInput): Promise<AuthResult> {
     passwordHash,
   });
 
-  const token = signToken({ id: user._id.toString(), email: user.email });
+  const token = signToken({ id: user._id.toString(), email: user.email, tokenVersion: user.tokenVersion || 0 });
 
   return {
     user: user.toJSON() as unknown as IUserDocument,
@@ -52,7 +52,7 @@ export async function login(email: string, password: string): Promise<AuthResult
     throw new AuthError('Invalid email or password.');
   }
 
-  const token = signToken({ id: user._id.toString(), email: user.email });
+  const token = signToken({ id: user._id.toString(), email: user.email, tokenVersion: user.tokenVersion || 0 });
 
   // Return user without sensitive fields
   const safeUser = await User.findById(user._id);
@@ -86,6 +86,16 @@ export async function forgotPassword(email: string): Promise<{ token: string; us
 }
 
 /**
+ * Clear/invalidate a pending password reset token (e.g. if email dispatch fails).
+ */
+export async function clearResetToken(email: string): Promise<void> {
+  await User.updateOne(
+    { email },
+    { $unset: { passwordResetToken: 1, passwordResetExpires: 1 } }
+  );
+}
+
+/**
  * Reset the user's password using a valid reset token.
  */
 export async function resetPassword(
@@ -100,7 +110,7 @@ export async function resetPassword(
   const user = await User.findOne({
     passwordResetToken: hashedToken,
     passwordResetExpires: { $gt: new Date() },
-  }).select('+passwordResetToken +passwordResetExpires');
+  }).select('+passwordResetToken +passwordResetExpires +tokenVersion');
 
   if (!user) {
     throw new AuthError('Password reset token is invalid or has expired. Please request a new one.');
@@ -109,6 +119,7 @@ export async function resetPassword(
   user.passwordHash = await hashPassword(newPassword);
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
+  user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalidate all prior sessions
   await user.save({ validateBeforeSave: false });
 }
 

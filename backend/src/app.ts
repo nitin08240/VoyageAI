@@ -7,6 +7,7 @@ import { env } from './config/env';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import { globalErrorHandler } from './middleware/error.middleware';
 import { optionalAuthenticate } from './middleware/auth.middleware';
+import { csrfProtection } from './middleware/csrf.middleware';
 
 // Route imports
 import authRoutes from './modules/auth/auth.routes';
@@ -18,6 +19,9 @@ import chatRoutes from './modules/chat/chat.routes';
 import * as tripsController from './modules/trips/trips.controller';
 
 const app: Express = express();
+
+// Trust reverse proxy (Render / Cloudflare) for accurate client IP identification
+app.set('trust proxy', 1);
 
 // ─── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet({
@@ -61,9 +65,9 @@ app.use(cors({
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  exposedHeaders: ['Set-Cookie'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS', 'PUT'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-CSRF-Token', 'X-XSRF-Token'],
+  exposedHeaders: ['Set-Cookie', 'X-CSRF-Token'],
 }));
 
 // ─── Body Parsing ──────────────────────────────────────────────────────────────
@@ -73,6 +77,9 @@ app.use(cookieParser());
 
 // ─── Global Rate Limiter ───────────────────────────────────────────────────────
 app.use('/api', apiLimiter);
+
+// ─── CSRF Protection on API routes ────────────────────────────────────────────
+app.use('/api', csrfProtection);
 
 // ─── Health Check ──────────────────────────────────────────────────────────────
 app.get('/api/v1/health', (_req, res) => {
