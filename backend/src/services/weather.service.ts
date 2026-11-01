@@ -43,7 +43,7 @@ class WeatherService {
     if (!key) return null;
 
     try {
-      const url = `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${key}`;
+      const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${key}`;
       const res = await fetch(url);
       if (!res.ok) return null;
       const data: any = await res.json();

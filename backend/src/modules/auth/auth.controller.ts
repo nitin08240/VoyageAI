@@ -3,6 +3,7 @@ import * as authService from './auth.service';
 import { setCookieToken, clearCookieToken } from '../../utils/token';
 import { sendSuccess } from '../../shared/response';
 import { AuthenticatedRequest } from '../../shared/types';
+import { emailService } from '../../services/email.service';
 
 /**
  * POST /api/v1/auth/register
@@ -15,7 +16,7 @@ export async function register(
   try {
     const { user, token } = await authService.register(req.body);
     setCookieToken(res, token);
-    sendSuccess(res, { user, token }, 'Account created successfully.', 201);
+    sendSuccess(res, { user }, 'Account created successfully.', 201);
   } catch (err) {
     next(err);
   }
@@ -33,7 +34,7 @@ export async function login(
     const { email, password } = req.body;
     const { user, token } = await authService.login(email, password);
     setCookieToken(res, token);
-    sendSuccess(res, { user, token }, 'Logged in successfully.');
+    sendSuccess(res, { user }, 'Logged in successfully.');
   } catch (err) {
     next(err);
   }
@@ -88,11 +89,8 @@ export async function forgotPassword(
     const { email } = req.body;
     const { token, userName } = await authService.forgotPassword(email);
 
-    // TODO: Integrate with an email service (e.g., Nodemailer/SendGrid) to send
-    // the reset link: `${CLIENT_URL}/reset-password?token=${token}` to the user.
-    // For now, log in dev and return generic success to prevent email enumeration.
-    if (token && process.env.NODE_ENV !== 'production') {
-      console.log(`\n🔑 Password reset token for ${email}: ${token}\n`);
+    if (token) {
+      await emailService.sendPasswordResetEmail(email, userName, token);
     }
 
     sendSuccess(

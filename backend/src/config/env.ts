@@ -51,6 +51,13 @@ function validateEnv(): Env {
     process.exit(1);
   }
 
+  // Block insecure default secrets in production
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.JWT_SECRET.includes('voyageai_super_secret')) {
+    console.error('❌ FATAL: Default JWT_SECRET from .env.example cannot be used in production!');
+    console.error('   Generate a secure secret: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"');
+    process.exit(1);
+  }
+
   return parsed.data;
 }
 

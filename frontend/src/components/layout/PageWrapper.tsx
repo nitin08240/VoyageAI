@@ -9,6 +9,7 @@ interface PageWrapperProps {
   hideFooter?: boolean;
   hideNavbar?: boolean;
   className?: string;
+  noNavbarOffset?: boolean;
 }
 
 const pageVariants = {
@@ -35,12 +36,13 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({
   children,
   hideFooter = false,
   hideNavbar = false,
-  className,
+  className = '',
+  noNavbarOffset = false,
 }) => {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col bg-navy-900">
+    <div className="min-h-screen flex flex-col bg-navy-950 text-slate-100 overflow-x-hidden relative selection:bg-accent-500/30 selection:text-white">
       <ScrollToTop />
       {!hideNavbar && <Navbar />}
       <AnimatePresence mode="wait">
@@ -51,7 +53,7 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({
           animate="animate"
           exit="exit"
           transition={pageTransition}
-          className={`flex-1 ${className || ''}`}
+          className={`flex-1 flex flex-col ${!hideNavbar && !noNavbarOffset ? 'pt-16' : ''} ${className}`}
         >
           {children}
         </motion.main>

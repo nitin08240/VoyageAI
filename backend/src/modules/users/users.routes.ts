@@ -4,6 +4,10 @@ import { authenticate } from '../../middleware/auth.middleware';
 
 const router = Router();
 
+// Public contact form submission
+// POST /api/v1/users/contact
+router.post('/contact', usersController.submitContact);
+
 // GET /api/v1/users/profile
 router.get('/profile', authenticate, usersController.getProfile);
 

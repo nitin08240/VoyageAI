@@ -136,7 +136,7 @@ export const ItineraryResults: React.FC = () => {
   // Regenerate handler
   const handleRegenerate = async () => {
     if (!tripId) return;
-    if (window.confirm('Regenerate this itinerary with Gemini? A new version will be created.')) {
+    if (window.confirm('Regenerate this itinerary? A new version will be created.')) {
       navigate(`/trips/${tripId}/generate`);
     }
   };
@@ -190,7 +190,7 @@ export const ItineraryResults: React.FC = () => {
               </div>
               <h2 className="text-2xl font-serif font-bold text-white mb-2">No Itinerary Found</h2>
               <p className="text-slate-400 text-xs sm:text-sm max-w-md mb-6">
-                We couldn't retrieve an itinerary for this trip. Generate one now with Gemini.
+                We couldn't retrieve an itinerary for this trip. Generate one now with VoyageAI.
               </p>
               <Button
                 variant="primary"

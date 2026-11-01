@@ -10,7 +10,7 @@ const MONGOOSE_OPTIONS: mongoose.ConnectOptions = {
   retryWrites: true,
   retryReads: true,
   heartbeatFrequencyMS: 10000,
-  autoIndex: true,
+  autoIndex: env.NODE_ENV !== 'production',
 };
 
 function setupConnectionEvents(): void {
@@ -44,6 +44,10 @@ export async function connectDB(): Promise<void> {
   } catch (err) {
     console.error('❌ Initial MongoDB connection failed:', (err as Error).message);
     console.warn('⚠️  Note: If using MongoDB Atlas, please ensure your IP address is whitelisted in Atlas Network Access (e.g. 0.0.0.0/0 for testing).');
+    if (env.NODE_ENV === 'production') {
+      console.error('❌ Cannot start in production without database. Exiting.');
+      process.exit(1);
+    }
   }
 }
 

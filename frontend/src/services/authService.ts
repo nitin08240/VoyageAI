@@ -19,10 +19,6 @@ export const authService = {
   login: async (payload: LoginPayload): Promise<AuthResponse> => {
     const res = await apiPost<ApiResponse<any>>('/auth/login', payload);
     const data = res.data?.data;
-    const token = data?.token || (res.data as any)?.token;
-    if (token) {
-      localStorage.setItem('voyage_token', token);
-    }
     const user = data?.user || res.data?.user || data;
     return {
       success: res.data.success,
@@ -34,10 +30,6 @@ export const authService = {
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
     const res = await apiPost<ApiResponse<any>>('/auth/register', payload);
     const data = res.data?.data;
-    const token = data?.token || (res.data as any)?.token;
-    if (token) {
-      localStorage.setItem('voyage_token', token);
-    }
     const user = data?.user || res.data?.user || data;
     return {
       success: res.data.success,
@@ -47,11 +39,7 @@ export const authService = {
   },
 
   logout: async (): Promise<void> => {
-    try {
-      await apiPost('/auth/logout');
-    } finally {
-      localStorage.removeItem('voyage_token');
-    }
+    await apiPost('/auth/logout');
   },
 
   getMe: async (): Promise<IUser | null> => {

@@ -5,6 +5,17 @@ import { useAuthStore } from '@/store/authStore';
 // Public pages
 import Home from '@/pages/Home';
 import Explore from '@/pages/Explore';
+import Features from '@/pages/Features';
+import HowItWorks from '@/pages/HowItWorks';
+import Pricing from '@/pages/Pricing';
+import About from '@/pages/About';
+import Blog from '@/pages/Blog';
+import Careers from '@/pages/Careers';
+import Contact from '@/pages/Contact';
+import PrivacyPolicy from '@/pages/legal/PrivacyPolicy';
+import TermsOfService from '@/pages/legal/TermsOfService';
+import CookiePolicy from '@/pages/legal/CookiePolicy';
+import RefundPolicy from '@/pages/legal/RefundPolicy';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
@@ -84,6 +95,21 @@ export const App: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/explore" element={<Explore />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/terms" element={<Navigate to="/terms-of-service" replace />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
+        <Route path="/cookies" element={<Navigate to="/cookie-policy" replace />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/refund" element={<Navigate to="/refund-policy" replace />} />
         <Route
           path="/login"
           element={

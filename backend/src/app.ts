@@ -2,6 +2,7 @@ import express, { Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import mongoose from 'mongoose';
 import { env } from './config/env';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import { globalErrorHandler } from './middleware/error.middleware';
@@ -20,8 +21,20 @@ const app: Express = express();
 
 // ─── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://*.tile.openstreetmap.org"],
+      connectSrc: ["'self'", env.CLIENT_URL],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 const allowedOrigins = [
@@ -35,11 +48,14 @@ const allowedOrigins = [
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (
-      allowedOrigins.includes(origin) ||
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Only allow localhost/127.0.0.1 in development
+    if (env.NODE_ENV !== 'production' && (
       /^http:\/\/localhost:\d+$/.test(origin) ||
       /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
-    ) {
+    )) {
       return callback(null, true);
     }
     return callback(new Error(`Not allowed by CORS: ${origin}`));
@@ -51,8 +67,8 @@ app.use(cors({
 }));
 
 // ─── Body Parsing ──────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 
 // ─── Global Rate Limiter ───────────────────────────────────────────────────────
@@ -60,11 +76,14 @@ app.use('/api', apiLimiter);
 
 // ─── Health Check ──────────────────────────────────────────────────────────────
 app.get('/api/v1/health', (_req, res) => {
-  res.json({
-    success: true,
-    message: 'VoyageAI API is running',
+  const isDbConnected = mongoose.connection.readyState === 1;
+  const status = isDbConnected ? 200 : 503;
+  res.status(status).json({
+    success: isDbConnected,
+    message: isDbConnected ? 'VoyageAI API is healthy and connected to database' : 'Database connection unavailable',
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
+    database: isDbConnected ? 'connected' : 'disconnected',
   });
 });
 

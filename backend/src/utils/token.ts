@@ -57,7 +57,7 @@ export function setCookieToken(res: Response, token: string): void {
   const cookieOptions: CookieOptions = {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: IS_PROD ? 'strict' : 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     maxAge: expiresMs,
     path: '/',
   };
@@ -76,7 +76,7 @@ export function clearCookieToken(res: Response): void {
   const cookieOptions: Parameters<Response['clearCookie']>[1] = {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: IS_PROD ? 'strict' : 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     path: '/',
   };
 

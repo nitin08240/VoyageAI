@@ -37,11 +37,10 @@ export const Step9Additional: React.FC<Step9AdditionalProps> = ({ data, onChange
                 key={p}
                 type="button"
                 onClick={() => updateAdd({ sightseeingPace: p })}
-                className={`py-3 px-4 rounded-xl border text-center font-medium capitalize text-xs transition-all ${
-                  isSelected
-                    ? 'bg-accent-500 text-white border-accent-400 shadow-md shadow-accent-500/20'
-                    : 'bg-navy-900/40 border-white/10 text-slate-300 hover:border-white/20'
-                }`}
+                className={`py-3 px-4 rounded-xl border text-center font-medium capitalize text-xs transition-all ${isSelected
+                  ? 'bg-accent-500 text-white border-accent-400 shadow-md shadow-accent-500/20'
+                  : 'bg-navy-900/40 border-white/10 text-slate-300 hover:border-white/20'
+                  }`}
               >
                 {p === 'slow' ? 'Relaxed & Unhurried' : p === 'medium' ? 'Balanced Highlights' : 'Action-Packed Blitz'}
               </button>
@@ -63,11 +62,10 @@ export const Step9Additional: React.FC<Step9AdditionalProps> = ({ data, onChange
                 key={lvl}
                 type="button"
                 onClick={() => updateAdd({ activityIntensity: lvl })}
-                className={`py-3 px-4 rounded-xl border text-center font-medium capitalize text-xs transition-all ${
-                  isSelected
-                    ? 'bg-accent-500 text-white border-accent-400 shadow-md shadow-accent-500/20'
-                    : 'bg-navy-900/40 border-white/10 text-slate-300 hover:border-white/20'
-                }`}
+                className={`py-3 px-4 rounded-xl border text-center font-medium capitalize text-xs transition-all ${isSelected
+                  ? 'bg-accent-500 text-white border-accent-400 shadow-md shadow-accent-500/20'
+                  : 'bg-navy-900/40 border-white/10 text-slate-300 hover:border-white/20'
+                  }`}
               >
                 {lvl}
               </button>
@@ -118,7 +116,7 @@ export const Step9Additional: React.FC<Step9AdditionalProps> = ({ data, onChange
       {/* Special Requests */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
-          <MessageSquare className="w-4 h-4 text-accent-400" /> Special Requests & Notes for Gemini
+          <MessageSquare className="w-4 h-4 text-accent-400" /> Special Requests & Notes for VoyageAI
         </label>
         <textarea
           rows={3}

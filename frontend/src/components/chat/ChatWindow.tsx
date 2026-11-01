@@ -47,7 +47,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [historyList, setHistoryList] = useState<IConversationSummary[]>([]);
-  const [activeProvider, setActiveProvider] = useState<string>('gemini');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -130,10 +129,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         setConversationId(res.conversationId);
       }
 
-      if (res.message.provider) {
-        setActiveProvider(res.message.provider);
-      }
-
       setMessages((prev) => [...prev, res.message]);
     } catch (err: any) {
       console.error('Chat error:', err);
@@ -171,8 +166,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-sm text-white leading-tight">VoyageAI Assistant</h3>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-slate-800 text-slate-300 border border-slate-700/60">
-                {activeProvider}
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Active
               </span>
             </div>
             <p className="text-[11px] text-slate-400">Personal Travel Expert • Multilingual</p>
@@ -357,7 +353,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   {/* Provider tag for assistant */}
                   {!isUser && msg.provider && msg.provider !== 'system' && (
                     <div className="text-[10px] text-slate-500 flex items-center justify-end gap-1 pt-1">
-                      <span>Powered by {msg.provider === 'gemini' ? 'Gemini 3.7' : 'Groq Fallback'}</span>
+                      <span>Powered by VoyageAI Intelligence</span>
                     </div>
                   )}
                 </div>
