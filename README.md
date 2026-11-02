@@ -1,6 +1,6 @@
 # 🌍 VoyageAI – AI-Powered Smart Travel Planner
 
-[LiveLink](https://voyageai-1-8pki.onrender.com)
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -9,6 +9,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
 > *"Your Journey. Your Budget. Your Perfect Plan."*
+> [LiveLink](https://voyageai-1-8pki.onrender.com)
 
 VoyageAI is an enterprise-grade full-stack travel planning platform that synthesizes hyper-personalized travel itineraries in seconds using Google's official Gemini AI SDK. Designed with a luxury editorial aesthetic, VoyageAI provides day-by-day schedules, transit logic, interactive Leaflet maps, real-time Recharts financial breakdowns, interactive 3D Three.js globe visualizer, multi-format PDF generation, and public itinerary sharing.
 
